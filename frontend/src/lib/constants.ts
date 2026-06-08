@@ -1,9 +1,21 @@
 export const MISSION_INFO = {
   name: "ARES-V",
+  id: "ARES-V-2026",
+  phase: "SURFACE_RECON_IV",
+  phaseLabel: "Surface Reconnaissance Phase IV",
   target: "Jezero Crater, Mars",
   metStart: "2026-02-14T05:00:00Z", // MET (Mission Elapsed Time) start
   groundStation: "Deep Space Network (DSN-43)",
   sol: 142
+};
+
+export const MISSION_METRICS = {
+  areaExplored: 34.2, // in %
+  samplesCollected: 18,
+  hazardsDetected: 6,
+  fleetHealth: 91, // in %
+  commsStatus: "NOMINAL",
+  activeAlertsCount: 3
 };
 
 export const NAV_LINKS = [

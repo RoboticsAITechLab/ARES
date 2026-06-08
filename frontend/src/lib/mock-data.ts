@@ -12,7 +12,11 @@ export const mockRovers: Rover[] = [
     longitude: 226.2045,
     speed: 0.25,
     lastContact: "1.2s ago",
-    type: "mother"
+    type: "mother",
+    cpu: 28,
+    memory: 44,
+    linkQuality: 98,
+    health: 97
   },
   {
     id: "scout-1",
@@ -20,12 +24,16 @@ export const mockRovers: Rover[] = [
     battery: 38,
     signal: 68,
     status: "warning",
-    temperature: 12, // slightly higher temperature in drive gear
+    temperature: 12,
     latitude: 18.6845,
     longitude: 226.2512,
     speed: 1.82,
     lastContact: "0.8s ago",
-    type: "scout"
+    type: "scout",
+    cpu: 67,
+    memory: 58,
+    linkQuality: 82,
+    health: 89
   },
   {
     id: "scout-2",
@@ -38,7 +46,11 @@ export const mockRovers: Rover[] = [
     longitude: 226.1593,
     speed: 0.0,
     lastContact: "2.4s ago",
-    type: "scout"
+    type: "scout",
+    cpu: 12,
+    memory: 36,
+    linkQuality: 92,
+    health: 99
   }
 ];
 
@@ -49,7 +61,7 @@ export const mockAlerts: Alert[] = [
     roverId: "scout-1",
     roverName: "Scout-Alpha",
     severity: "warning",
-    message: "Battery level below 40% threshold."
+    message: "Battery reserves below 40% (current: 38%). Scheduled solar panel sweep recommended."
   },
   {
     id: "alert-2",
@@ -57,7 +69,7 @@ export const mockAlerts: Alert[] = [
     roverId: "scout-1",
     roverName: "Scout-Alpha",
     severity: "warning",
-    message: "Sensor enclosure temperature exceeded nominal threshold (12°C)."
+    message: "Drive gear assembly temp at 12°C. Elevated friction detected on rear axle."
   },
   {
     id: "alert-3",
@@ -65,7 +77,7 @@ export const mockAlerts: Alert[] = [
     roverId: "mother-rover",
     roverName: "ARES MotherShip",
     severity: "nominal",
-    message: "Primary radio transceiver locked. Signal link stable."
+    message: "Primary radio transceiver locked. Signal link stable at 92% DSN lock."
   },
   {
     id: "alert-4",
@@ -73,7 +85,7 @@ export const mockAlerts: Alert[] = [
     roverId: "scout-2",
     roverName: "Scout-Beta",
     severity: "nominal",
-    message: "Completed autonomous drill sampling profile."
+    message: "Completed autonomous drill core sampling. Stored in sample bay container 4."
   },
   {
     id: "alert-5",
@@ -81,7 +93,7 @@ export const mockAlerts: Alert[] = [
     roverId: "scout-1",
     roverName: "Scout-Alpha",
     severity: "critical",
-    message: "Dust accumulation warning on auxiliary power array."
+    message: "Dust accumulation warning on auxiliary power array. Charging efficiency degraded."
   }
 ];
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { Battery, Wifi, MapPin, Gauge, Thermometer } from "lucide-react";
+import { Battery, Wifi, MapPin, Gauge, Thermometer, Cpu, Heart } from "lucide-react";
 import { Rover } from "@/lib/types";
 import { STATUS_STYLES } from "@/lib/constants";
 import { Badge } from "@/components/ui/badge";
@@ -13,12 +13,12 @@ export default function ScoutCard({ rover }: ScoutCardProps) {
   const style = STATUS_STYLES[rover.status as keyof typeof STATUS_STYLES] || STATUS_STYLES.online;
 
   return (
-    <div className="rounded border border-slate-800 bg-[#111827] hover:border-slate-700 transition duration-150 relative">
+    <div className="rounded border border-slate-800 bg-[#111827] hover:border-slate-700/80 transition duration-150 relative font-mono">
       {/* Header */}
-      <div className="border-b border-slate-800/80 bg-slate-900/40 px-4 py-2.5 flex justify-between items-center font-mono">
-        <div className="flex items-center gap-2">
-          <span className="text-slate-500 text-[9px] tracking-wider font-bold">SCOUT UNIT //</span>
-          <h4 className="text-xs font-bold text-white tracking-wider uppercase">{rover.name}</h4>
+      <div className="border-b border-slate-800 bg-slate-900/60 px-4 py-2.5 flex justify-between items-center">
+        <div className="flex items-center gap-1.5">
+          <span className="text-slate-500 text-[9px] tracking-wider font-bold">RECON UNIT //</span>
+          <h4 className="text-xs font-bold text-white tracking-widest uppercase">{rover.name}</h4>
         </div>
         <Badge variant="outline" className={`text-[8px] py-0 px-2 rounded-full tracking-wider font-semibold border ${style.badge}`}>
           {style.label}
@@ -26,55 +26,71 @@ export default function ScoutCard({ rover }: ScoutCardProps) {
       </div>
 
       {/* Body Content */}
-      <div className="p-4 font-mono space-y-4">
-        {/* Core telemetry specs */}
-        <div className="grid grid-cols-2 gap-3 text-[10px]">
-          {/* Battery */}
-          <div className="flex items-center gap-2 bg-slate-950/30 px-2.5 py-1.5 rounded border border-slate-900">
-            <Battery className={`h-4 w-4 ${rover.battery < 40 ? 'text-rose-400' : 'text-emerald-400'}`} />
-            <div className="flex flex-col">
-              <span className="text-[8px] text-slate-500 uppercase">Battery</span>
-              <span className={`font-bold ${rover.battery < 40 ? 'text-rose-400' : 'text-slate-200'}`}>
-                {rover.battery}%
+      <div className="p-4 space-y-3">
+        {/* Progress Bars (Battery & Signal) */}
+        <div className="grid grid-cols-2 gap-3 text-[9px] text-slate-400">
+          <div className="space-y-1">
+            <div className="flex justify-between font-semibold">
+              <span className="flex items-center gap-1">
+                <Battery className="h-3 w-3 text-cyan-400" />
+                BATTERY
               </span>
+              <span>{rover.battery}%</span>
+            </div>
+            <div className="h-1 w-full bg-slate-950 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full ${rover.battery < 40 ? 'bg-rose-500' : 'bg-cyan-500'}`}
+                style={{ width: `${rover.battery}%` }}
+              ></div>
             </div>
           </div>
 
-          {/* Signal */}
-          <div className="flex items-center gap-2 bg-slate-950/30 px-2.5 py-1.5 rounded border border-slate-900">
-            <Wifi className={`h-4 w-4 ${rover.signal < 70 ? 'text-amber-400' : 'text-cyan-400'}`} />
-            <div className="flex flex-col">
-              <span className="text-[8px] text-slate-500 uppercase">Signal</span>
-              <span className="font-bold text-slate-200">{rover.signal}%</span>
+          <div className="space-y-1">
+            <div className="flex justify-between font-semibold">
+              <span className="flex items-center gap-1">
+                <Wifi className="h-3 w-3 text-cyan-400" />
+                SIGNAL
+              </span>
+              <span>{rover.signal}%</span>
             </div>
-          </div>
-
-          {/* Temp */}
-          <div className="flex items-center gap-2 bg-slate-950/30 px-2.5 py-1.5 rounded border border-slate-900">
-            <Thermometer className="h-4 w-4 text-slate-500" />
-            <div className="flex flex-col">
-              <span className="text-[8px] text-slate-500 uppercase">Temp</span>
-              <span className="font-bold text-slate-200">{rover.temperature}°C</span>
-            </div>
-          </div>
-
-          {/* Speed */}
-          <div className="flex items-center gap-2 bg-slate-950/30 px-2.5 py-1.5 rounded border border-slate-900">
-            <Gauge className="h-4 w-4 text-slate-500" />
-            <div className="flex flex-col">
-              <span className="text-[8px] text-slate-500 uppercase">Speed</span>
-              <span className="font-bold text-slate-200">{rover.speed.toFixed(1)} m/s</span>
+            <div className="h-1 w-full bg-slate-950 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-cyan-500 rounded-full"
+                style={{ width: `${rover.signal}%` }}
+              ></div>
             </div>
           </div>
         </div>
 
-        {/* Location coordinates */}
-        <div className="bg-slate-950/30 p-2 rounded border border-slate-900 text-[9px] text-slate-400 flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <MapPin className="h-3.5 w-3.5 text-slate-500" />
-            <span>LAT: {rover.latitude.toFixed(5)} / LON: {rover.longitude.toFixed(5)}</span>
+        {/* Diagnostic parameters grid */}
+        <div className="grid grid-cols-2 gap-2 text-[9px] text-slate-400 border-t border-slate-800/60 pt-2.5">
+          <div className="flex justify-between bg-slate-950/20 px-2 py-1 rounded border border-slate-900">
+            <span>TEMP:</span>
+            <span className="font-bold text-slate-200">{rover.temperature}°C</span>
           </div>
-          <span className="text-[8px] text-slate-500 uppercase">MET LINK: {rover.lastContact}</span>
+          <div className="flex justify-between bg-slate-950/20 px-2 py-1 rounded border border-slate-900">
+            <span>CPU:</span>
+            <span className="font-bold text-slate-200">{rover.cpu}%</span>
+          </div>
+          <div className="flex justify-between bg-slate-950/20 px-2 py-1 rounded border border-slate-900">
+            <span>MEM:</span>
+            <span className="font-bold text-slate-200">{rover.memory}%</span>
+          </div>
+          <div className="flex justify-between bg-slate-950/20 px-2 py-1 rounded border border-slate-900">
+            <span>HEALTH:</span>
+            <span className="font-bold text-slate-200">{rover.health}%</span>
+          </div>
+        </div>
+
+        {/* Location & Speed */}
+        <div className="bg-slate-950/40 p-2 rounded border border-slate-800/80 text-[8px] text-slate-500 space-y-1">
+          <div className="flex justify-between items-center">
+            <span className="flex items-center gap-1">
+              <MapPin className="h-3 w-3 text-slate-600" />
+              LA {rover.latitude.toFixed(4)} / LO {rover.longitude.toFixed(4)}
+            </span>
+            <span>{rover.speed.toFixed(1)} m/s</span>
+          </div>
         </div>
       </div>
     </div>
