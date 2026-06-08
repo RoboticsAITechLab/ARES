@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "ARES Ground Operations Hub",
-  description: "Planetary exploration mission control and telemetry console",
+  description: "Planetary exploration mission control and telemetry platform",
 };
 
 export default function RootLayout({

@@ -116,7 +116,7 @@ export default function Topbar() {
 
         {/* Alert Tally */}
         {criticalAlertsCount > 0 ? (
-          <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-rose-500/10 border border-rose-500/30 text-rose-400 animate-pulse">
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-rose-500/10 border border-rose-500/30 text-rose-400">
             <ShieldAlert className="h-3 w-3 text-rose-500" />
             <span className="font-bold">{criticalAlertsCount} CRITICAL ALERT(S)</span>
           </div>
@@ -127,7 +127,7 @@ export default function Topbar() {
           </div>
         ) : (
           <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
             <span className="font-bold">SYSTEMS NOMINAL</span>
           </div>
         )}

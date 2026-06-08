@@ -79,7 +79,7 @@ export default function MissionControlPage() {
           <div>
             <div className="flex justify-between items-center mb-3 font-mono">
               <span className="text-xs font-semibold text-slate-400 tracking-wider uppercase">HERO_NODE // CORE_TELEMETRY</span>
-              <span className="text-[8px] text-cyan-400 font-bold uppercase tracking-widest animate-pulse">PRIMARY DATA STREAM</span>
+              <span className="text-[8px] text-cyan-400 font-bold uppercase tracking-widest">PRIMARY DATA STREAM</span>
             </div>
             <MotherRoverCard rover={motherRover} />
           </div>

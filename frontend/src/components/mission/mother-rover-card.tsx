@@ -1,6 +1,6 @@
 "use client";
 
-import { Battery, Wifi, MapPin, Gauge, Thermometer, ShieldAlert, Cpu, Heart, Database, AlertCircle } from "lucide-react";
+import { Battery, Wifi, MapPin, Gauge, Thermometer, Cpu, Heart, Layers } from "lucide-react";
 import { Rover } from "@/lib/types";
 import { STATUS_STYLES } from "@/lib/constants";
 
@@ -12,172 +12,135 @@ export default function MotherRoverCard({ rover }: MotherRoverCardProps) {
   const style = STATUS_STYLES[rover.status as keyof typeof STATUS_STYLES] || STATUS_STYLES.online;
 
   return (
-    <div className="relative overflow-hidden rounded border border-cyan-500/40 bg-[#111827] shadow-[0_0_25px_rgba(6,182,212,0.12)]">
-      {/* Decorative Aerospace Tech Borders */}
-      <div className="absolute top-0 left-0 w-3.5 h-3.5 border-t-2 border-l-2 border-cyan-400"></div>
-      <div className="absolute top-0 right-0 w-3.5 h-3.5 border-t-2 border-r-2 border-cyan-400"></div>
-      <div className="absolute bottom-0 left-0 w-3.5 h-3.5 border-b-2 border-l-2 border-cyan-400"></div>
-      <div className="absolute bottom-0 right-0 w-3.5 h-3.5 border-b-2 border-r-2 border-cyan-400"></div>
+    <div className="relative overflow-hidden rounded border-2 border-cyan-500/50 bg-[#111827] shadow-[0_0_30px_rgba(6,182,212,0.15)] flex flex-col">
+      {/* Thick Cyan Aerospace Top Banner */}
+      <div className="h-1.5 bg-cyan-500 w-full"></div>
 
-      {/* Hero Header */}
-      <div className="border-b border-slate-800 bg-slate-900/80 px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-mono">
-        <div className="flex items-center gap-2.5">
-          <div className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse"></div>
-          <span className="text-slate-500 text-[10px] tracking-widest font-bold">PRIMARY MOBILE CONTROL NODE //</span>
-          <h3 className="text-base font-extrabold text-white tracking-widest uppercase">{rover.name}</h3>
+      {/* Decorative Technical Corners */}
+      <div className="absolute top-1.5 left-0 w-3 h-3 border-t border-l border-cyan-400"></div>
+      <div className="absolute top-1.5 right-0 w-3 h-3 border-t border-r border-cyan-400"></div>
+      <div className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-cyan-400"></div>
+      <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-cyan-400"></div>
+
+      {/* Header with high contrast */}
+      <div className="border-b border-slate-800 bg-slate-900/90 px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-mono">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <div className="h-2 w-2 rounded-full bg-cyan-400"></div>
+            <span className="text-slate-400 text-[10px] tracking-widest font-extrabold uppercase">PRIMARY GROUND COMMAND NODE</span>
+          </div>
+          <h3 className="text-lg font-black text-white tracking-widest uppercase">{rover.name}</h3>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-[9px] px-2 py-0.5 rounded border border-cyan-500/20 bg-cyan-500/10 text-cyan-400 font-bold uppercase tracking-widest">
-            HERO NODE
+        <div className="flex items-center gap-2.5">
+          <span className="text-[9px] px-2 py-1 rounded font-bold border border-cyan-500 bg-cyan-500/10 text-cyan-400 uppercase tracking-widest">
+            MASTER CORE
           </span>
-          <span className={`text-[10px] font-bold px-3 py-0.5 rounded border ${style.badge}`}>
+          <span className={`text-[10px] font-bold px-3 py-1 rounded border ${style.badge}`}>
             {style.label}
           </span>
         </div>
       </div>
 
-      <div className="p-6 font-mono space-y-6">
-        {/* Core Stats Progress Blocks */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {/* Battery capacity */}
-          <div className="bg-slate-950/50 p-3.5 rounded border border-slate-800 space-y-2">
+      {/* Body Content */}
+      <div className="p-6 font-mono space-y-6 flex-1">
+        {/* Subtitle / Description Section */}
+        <div className="flex items-center gap-2 text-[10px] text-slate-400 bg-slate-950/40 p-2.5 rounded border border-slate-900 leading-normal">
+          <Layers className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
+          <span>Coordinates fleet exploration vectors and acts as primary DSN orbital transceiver link.</span>
+        </div>
+
+        {/* Priority Telemetry Progress Bars (Thicker for Mother Rover) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {/* Battery */}
+          <div className="space-y-2">
             <div className="flex justify-between items-center text-[10px]">
-              <span className="text-slate-400 flex items-center gap-1.5 font-semibold">
-                <Battery className="h-3.5 w-3.5 text-cyan-400" />
-                BATTERY STORAGE
+              <span className="text-slate-400 flex items-center gap-1.5 font-bold uppercase">
+                <Battery className="h-4 w-4 text-cyan-400" />
+                POWER CORE CAPACITY
               </span>
-              <span className="font-bold text-slate-200">{rover.battery}%</span>
+              <span className="font-extrabold text-slate-200">{rover.battery}%</span>
             </div>
-            <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden">
+            <div className="h-2.5 w-full bg-slate-950 rounded border border-slate-800/80 p-0.5">
               <div
-                className="h-full bg-cyan-500 rounded-full"
+                className="h-full bg-cyan-500 rounded-sm transition-all duration-300 shadow-[0_0_10px_rgba(6,182,212,0.3)]"
                 style={{ width: `${rover.battery}%` }}
               ></div>
             </div>
-            <div className="text-[8px] text-slate-500 flex justify-between">
-              <span>VOLTAGE: 24.2V</span>
-              <span>NOMINAL TEMP</span>
-            </div>
           </div>
 
-          {/* Comms link */}
-          <div className="bg-slate-950/50 p-3.5 rounded border border-slate-800 space-y-2">
+          {/* DSN lock */}
+          <div className="space-y-2">
             <div className="flex justify-between items-center text-[10px]">
-              <span className="text-slate-400 flex items-center gap-1.5 font-semibold">
-                <Wifi className="h-3.5 w-3.5 text-cyan-400" />
-                DSN CARRIER LINK
+              <span className="text-slate-400 flex items-center gap-1.5 font-bold uppercase">
+                <Wifi className="h-4 w-4 text-cyan-400" />
+                ORBITAL DSN LOCK
               </span>
-              <span className="font-bold text-slate-200">{rover.signal}%</span>
+              <span className="font-extrabold text-slate-200">{rover.signal}%</span>
             </div>
-            <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden">
+            <div className="h-2.5 w-full bg-slate-950 rounded border border-slate-800/80 p-0.5">
               <div
-                className="h-full bg-cyan-500 rounded-full"
+                className="h-full bg-cyan-500 rounded-sm transition-all duration-300 shadow-[0_0_10px_rgba(6,182,212,0.3)]"
                 style={{ width: `${rover.signal}%` }}
               ></div>
-            </div>
-            <div className="text-[8px] text-slate-500 flex justify-between">
-              <span>LATENCY: 1.2s</span>
-              <span>BAND: X_BAND</span>
-            </div>
-          </div>
-
-          {/* CPU utilization */}
-          <div className="bg-slate-950/50 p-3.5 rounded border border-slate-800 space-y-2">
-            <div className="flex justify-between items-center text-[10px]">
-              <span className="text-slate-400 flex items-center gap-1.5 font-semibold">
-                <Cpu className="h-3.5 w-3.5 text-cyan-400" />
-                CPU PROCESSOR LOAD
-              </span>
-              <span className="font-bold text-slate-200">{rover.cpu}%</span>
-            </div>
-            <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-cyan-500 rounded-full"
-                style={{ width: `${rover.cpu}%` }}
-              ></div>
-            </div>
-            <div className="text-[8px] text-slate-500 flex justify-between">
-              <span>SYS CORE: active</span>
-              <span>THREADS: 16/16</span>
-            </div>
-          </div>
-
-          {/* Physical Health */}
-          <div className="bg-slate-950/50 p-3.5 rounded border border-slate-800 space-y-2">
-            <div className="flex justify-between items-center text-[10px]">
-              <span className="text-slate-400 flex items-center gap-1.5 font-semibold">
-                <Heart className="h-3.5 w-3.5 text-cyan-400" />
-                VEHICLE INTEG HEALTH
-              </span>
-              <span className="font-bold text-slate-200">{rover.health}%</span>
-            </div>
-            <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-cyan-500 rounded-full"
-                style={{ width: `${rover.health}%` }}
-              ></div>
-            </div>
-            <div className="text-[8px] text-slate-500 flex justify-between">
-              <span>STRUCTURAL: ok</span>
-              <span>SENSORS: ok</span>
             </div>
           </div>
         </div>
 
-        {/* Detailed Metrics Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-slate-950/30 p-3 rounded border border-slate-800/60 text-[10px]">
-            <span className="text-slate-500 uppercase tracking-widest text-[8px] block">POSITION VECTOR</span>
-            <div className="mt-1.5 space-y-0.5">
-              <div className="text-slate-300 font-bold">LAT: {rover.latitude.toFixed(5)}</div>
-              <div className="text-slate-300 font-bold">LON: {rover.longitude.toFixed(5)}</div>
+        {/* Main stats readings */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="bg-slate-950/40 p-4 rounded border border-slate-850 flex flex-col justify-between min-h-[90px]">
+            <span className="text-slate-500 uppercase tracking-widest text-[8px] font-bold">VECTOR TARGET</span>
+            <div className="mt-2 text-[11px] font-bold text-slate-200 tracking-wide space-y-0.5">
+              <div>LA {rover.latitude.toFixed(5)}</div>
+              <div>LO {rover.longitude.toFixed(5)}</div>
             </div>
           </div>
 
-          <div className="bg-slate-950/30 p-3 rounded border border-slate-800/60 text-[10px] flex flex-col justify-between">
-            <span className="text-slate-500 uppercase tracking-widest text-[8px] block">VELOCITY MODULE</span>
-            <div className="text-base font-extrabold text-cyan-400 tracking-wide mt-1.5">
-              {rover.speed.toFixed(2)} <span className="text-[9px] text-slate-500 font-normal">m/s</span>
+          <div className="bg-slate-950/40 p-4 rounded border border-slate-850 flex flex-col justify-between min-h-[90px]">
+            <span className="text-slate-500 uppercase tracking-widest text-[8px] font-bold">VELOCITY</span>
+            <div className="text-lg font-black text-cyan-400 tracking-wide mt-2">
+              {rover.speed.toFixed(2)} <span className="text-[10px] text-slate-500 font-normal">m/s</span>
             </div>
           </div>
 
-          <div className="bg-slate-950/30 p-3 rounded border border-slate-800/60 text-[10px] flex flex-col justify-between">
-            <span className="text-slate-500 uppercase tracking-widest text-[8px] block">CORE TEMPERATURE</span>
-            <div className="text-base font-extrabold text-slate-200 tracking-wide mt-1.5">
+          <div className="bg-slate-950/40 p-4 rounded border border-slate-850 flex flex-col justify-between min-h-[90px]">
+            <span className="text-slate-500 uppercase tracking-widest text-[8px] font-bold">TEMPERATURE</span>
+            <div className="text-lg font-black text-slate-200 tracking-wide mt-2">
               {rover.temperature}°C
             </div>
           </div>
 
-          <div className="bg-slate-950/30 p-3 rounded border border-slate-800/60 text-[10px] flex flex-col justify-between">
-            <span className="text-slate-500 uppercase tracking-widest text-[8px] block">MEMORY REGISTER</span>
-            <div className="text-base font-extrabold text-slate-200 tracking-wide mt-1.5">
-              {rover.memory}% <span className="text-[9px] text-slate-500 font-normal">RAM</span>
+          <div className="bg-slate-950/40 p-4 rounded border border-slate-850 flex flex-col justify-between min-h-[90px]">
+            <span className="text-slate-500 uppercase tracking-widest text-[8px] font-bold">DIAGNOSTICS</span>
+            <div className="mt-2 text-[10px] text-slate-300 font-semibold space-y-0.5">
+              <div className="flex justify-between"><span>CPU:</span><span>{rover.cpu}%</span></div>
+              <div className="flex justify-between"><span>MEM:</span><span>{rover.memory}%</span></div>
             </div>
           </div>
         </div>
 
-        {/* Subsystems Matrix */}
+        {/* Subsystems Diagnostics grid */}
         <div className="border-t border-slate-800/80 pt-4">
-          <div className="flex justify-between items-center text-[8px] text-slate-500 uppercase tracking-widest mb-3">
-            <span>CORE SUBSYSTEM DIAGNOSTICS MATRIX</span>
-            <span className="text-cyan-500 font-semibold">SIMULATED TELEMETRY FEED ACTIVE</span>
+          <div className="flex justify-between items-center text-[8px] text-slate-500 uppercase tracking-widest mb-3 font-bold">
+            <span>CORE SUBSYSTEM DIAGNOSTICS</span>
+            <span className="text-cyan-500">SIMULATED FEED ACTIVE</span>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-[10px] text-slate-400">
-            <div className="flex justify-between items-center border-b border-slate-900/60 pb-1.5">
-              <span>RTG POWER CELL</span>
-              <span className="text-emerald-400 font-bold">NOMINAL</span>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-[9px] text-slate-400">
+            <div className="flex justify-between items-center border-b border-slate-900 pb-1.5">
+              <span>POWER RTG</span>
+              <span className="text-emerald-400 font-bold">OK</span>
             </div>
-            <div className="flex justify-between items-center border-b border-slate-900/60 pb-1.5">
-              <span>THERMAL REGULATOR</span>
-              <span className="text-emerald-400 font-bold">NOMINAL</span>
+            <div className="flex justify-between items-center border-b border-slate-900 pb-1.5">
+              <span>THERMAL SWEEP</span>
+              <span className="text-emerald-400 font-bold">OK</span>
             </div>
-            <div className="flex justify-between items-center border-b border-slate-900/60 pb-1.5">
-              <span>HGA SATELLITE MOTOR</span>
-              <span className="text-emerald-400 font-bold">NOMINAL</span>
+            <div className="flex justify-between items-center border-b border-slate-900 pb-1.5">
+              <span>HGA ENCODER</span>
+              <span className="text-emerald-400 font-bold">OK</span>
             </div>
-            <div className="flex justify-between items-center border-b border-slate-900/60 pb-1.5">
-              <span>IMU ORIENTATION SENSOR</span>
-              <span className="text-emerald-400 font-bold">NOMINAL</span>
+            <div className="flex justify-between items-center border-b border-slate-900 pb-1.5">
+              <span>IMU STATE</span>
+              <span className="text-emerald-400 font-bold">OK</span>
             </div>
           </div>
         </div>

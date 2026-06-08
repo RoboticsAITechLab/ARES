@@ -18,7 +18,7 @@ export default function MissionTimeline() {
           <Compass className="h-3.5 w-3.5 text-cyan-400" />
           CHRONOLOGICAL_MILESTONES // MET_CHECKLIST
         </h2>
-        <span className="text-[8px] text-cyan-400 uppercase font-bold animate-pulse">
+        <span className="text-[8px] text-cyan-400 uppercase font-bold">
           PHASE_IV ACTIVE
         </span>
       </div>
@@ -35,7 +35,6 @@ export default function MissionTimeline() {
                   </div>
                 ) : (
                   <div className="h-5 w-5 rounded-full bg-cyan-500/10 border border-cyan-500/40 flex items-center justify-center text-cyan-400 relative">
-                    <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-cyan-400 opacity-75"></span>
                     <div className="h-1.5 w-1.5 rounded-full bg-cyan-400"></div>
                   </div>
                 )}

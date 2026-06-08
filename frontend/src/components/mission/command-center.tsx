@@ -10,7 +10,7 @@ export default function CommandCenter() {
       <div className="flex items-center justify-between">
         <h2 className="font-mono text-xs font-semibold text-slate-400 tracking-wider flex items-center gap-1.5">
           <Sliders className="h-3.5 w-3.5 text-cyan-400" />
-          DIRECTIVES_CONSOLE // MANUAL_INTERRUPT
+          DIRECTIVES_PANEL // MANUAL_INTERRUPT
         </h2>
         <span className="font-mono text-[9px] text-slate-500 uppercase tracking-widest bg-slate-900 border border-slate-800 px-2 py-0.5 rounded">
           STATUS: ONLINE

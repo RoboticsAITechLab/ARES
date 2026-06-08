@@ -1,6 +1,6 @@
 "use client";
 
-import { MapPin, Info, Navigation, RefreshCw, Layers, ShieldAlert } from "lucide-react";
+import { MapPin, Info, Navigation, RefreshCw, Layers } from "lucide-react";
 import { mockRovers } from "@/lib/mock-data";
 
 export default function LiveMapPage() {
@@ -31,13 +31,13 @@ export default function LiveMapPage() {
   ];
 
   const scout1Path = [
-    { lat: 18.6521, lon: 226.2045 }, // started at mother
+    { lat: 18.6521, lon: 226.2045 },
     { lat: 18.6700, lon: 226.2200 },
     { lat: 18.6845, lon: 226.2512 }
   ];
 
   const scout2Path = [
-    { lat: 18.6521, lon: 226.2045 }, // started at mother
+    { lat: 18.6521, lon: 226.2045 },
     { lat: 18.6300, lon: 226.1800 },
     { lat: 18.6214, lon: 226.1593 }
   ];
@@ -80,13 +80,6 @@ export default function LiveMapPage() {
         {/* Map Viewport Container */}
         <div className="xl:col-span-3 border border-slate-800 bg-[#111827] rounded p-4 flex flex-col gap-4 relative">
           
-          {/* THREE.JS INTEGRATION EXTENSION POINT */}
-          {/*
-            To integrate Three.js WebGL rendering in the future:
-            1. Replace the SVG Map component with a `<Canvas>` or your custom WebGL component.
-            2. Bind your orbit controls and pass `mockRovers` as coordinates nodes to plot 3D models.
-            3. Target container ID: `#threejs-map-viewport`
-          */}
           <div id="threejs-map-viewport" className="hidden">
             {/* Future Canvas element location */}
           </div>
@@ -166,30 +159,35 @@ export default function LiveMapPage() {
                 const { x, y } = projectCoords(haz.lat, haz.lon);
                 return (
                   <g key={idx}>
-                    {/* Crosshair */}
                     <line x1={x - 6} y1={y} x2={x + 6} y2={y} stroke="#EF4444" strokeWidth="1" />
                     <line x1={x} y1={y - 6} x2={x} y2={y + 6} stroke="#EF4444" strokeWidth="1" />
                     <circle cx={x} cy={y} r="3" className="fill-none stroke-rose-500/40" strokeWidth="0.8" />
-                    {/* label */}
                     <text x={x + 8} y={y + 3} fill="#EF4444" fontSize="6" fontWeight="bold">{haz.label}</text>
                   </g>
                 );
               })}
 
-              {/* Mother Rover Map Marker & Footprint */}
+              {/* Mother Rover Map Marker & Footprint - Scaled up by 150% */}
               {(() => {
                 const { x, y } = projectCoords(motherRover.latitude, motherRover.longitude);
                 return (
                   <g key={motherRover.id}>
-                    <circle cx={x} cy={y} r="18" className="fill-none stroke-cyan-500/15" strokeWidth="1" strokeDasharray="3,3" />
-                    <circle cx={x} cy={y} r="9" className="fill-cyan-500/10 stroke-cyan-500/30" strokeWidth="1" />
-                    <circle cx={x} cy={y} r="4" className="fill-cyan-400 stroke-slate-950" strokeWidth="1.5" />
-                    <text x={x + 8} y={y - 8} fill="#06B6D4" fontSize="8" fontWeight="extrabold">{motherRover.name.toUpperCase()}</text>
+                    {/* Footprint outer ring (increased from 18 to 27) */}
+                    <circle cx={x} cy={y} r="27" className="fill-none stroke-cyan-500/15" strokeWidth="1.2" strokeDasharray="3,3" />
+                    {/* Footprint inner ring (increased from 9 to 14) */}
+                    <circle cx={x} cy={y} r="14" className="fill-cyan-500/10 stroke-cyan-500/30" strokeWidth="1.2" />
+                    {/* Core center dot (increased from 4 to 8) */}
+                    <circle cx={x} cy={y} r="8" className="fill-cyan-400 stroke-slate-950" strokeWidth="2" />
+                    {/* Target Crosshairs for Mother Rover */}
+                    <line x1={x - 12} y1={y} x2={x + 12} y2={y} stroke="#06B6D4" strokeWidth="0.8" strokeOpacity="0.4" />
+                    <line x1={x} y1={y - 12} x2={x} y2={y + 12} stroke="#06B6D4" strokeWidth="0.8" strokeOpacity="0.4" />
+                    
+                    <text x={x + 12} y={y - 12} fill="#06B6D4" fontSize="9" fontWeight="extrabold">{motherRover.name.toUpperCase()}</text>
                   </g>
                 );
               })()}
 
-              {/* Scout Rovers Markers */}
+              {/* Scout Rovers Markers - Left intentionally smaller */}
               {scoutRovers.map((rover) => {
                 const { x, y } = projectCoords(rover.latitude, rover.longitude);
                 const isWarning = rover.status === "warning";
@@ -236,14 +234,14 @@ export default function LiveMapPage() {
             <div className="space-y-2.5 text-[9px] text-slate-400">
               <div className="flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-cyan-400"></span>
-                <span className="font-bold text-slate-200">ARES MOTHER ROVER</span>
+                <span className="font-bold text-slate-200">ARES MOTHER ROVER (HERO CORE)</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-slate-300"></span>
                 <span className="font-bold text-slate-200">SCOUT UNITS (NOMINAL)</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse"></span>
+                <span className="h-2 w-2 rounded-full bg-amber-500"></span>
                 <span className="font-bold text-amber-500">SCOUT UNITS (WARNING)</span>
               </div>
               <div className="flex items-center gap-2">
