@@ -1,11 +1,10 @@
 "use client";
 
-import { Compass, Thermometer, ShieldAlert, Wifi, Activity, AlertTriangle, Layers } from "lucide-react";
+import { Compass } from "lucide-react";
 import { mockRovers } from "@/lib/mock-data";
 import { MISSION_INFO, MISSION_METRICS } from "@/lib/constants";
 import MotherRoverCard from "@/components/mission/mother-rover-card";
 import ScoutCard from "@/components/mission/scout-card";
-import FleetStatus from "@/components/mission/fleet-status";
 import CommandCenter from "@/components/mission/command-center";
 import Alerts from "@/components/mission/alerts";
 import MissionTimeline from "@/components/mission/mission-timeline";
@@ -22,7 +21,7 @@ export default function MissionControlPage() {
         <div className="flex items-center gap-3">
           <Compass className="h-6 w-6 text-cyan-400 shrink-0" />
           <div>
-            <div className="text-[9px] text-slate-500 tracking-wider uppercase">MISSION LOGISTICAL BASE</div>
+            <div className="text-[9px] text-slate-500 tracking-wider uppercase">MISSION OBJECTIVES STATUS</div>
             <h1 className="text-sm font-bold text-white tracking-widest uppercase">
               {MISSION_INFO.name} // SURFACE OPERATIONS BANNER
             </h1>
@@ -57,40 +56,35 @@ export default function MissionControlPage() {
         </div>
       </div>
 
-      {/* Grid Layout
+      {/* Operations Grid: 
           Desktop: 3 columns (xl)
-          Laptop: 2 columns (lg)
+          Laptop/Tablet: 2 columns (lg)
           Mobile: 1 column */}
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 items-start">
         
-        {/* Column 1: Fleet Status & Command Center */}
-        <div className="space-y-6">
-          <div className="p-5 border border-slate-800 bg-slate-950/20 rounded">
-            <FleetStatus rovers={mockRovers} />
+        {/* Column 1: Mother Rover (Primary Command Node) & Directives Override */}
+        <div className="space-y-6 lg:col-span-1">
+          <div>
+            <div className="flex justify-between items-center mb-3 font-mono">
+              <span className="text-xs font-semibold text-slate-400 tracking-wider uppercase">COMMAND_NODE // METRICS</span>
+              <span className="text-[8px] text-cyan-405 font-bold uppercase tracking-widest">PRIMARY TELEMETRY</span>
+            </div>
+            <MotherRoverCard rover={motherRover} />
           </div>
+
           <div className="p-5 border border-slate-800 bg-slate-950/20 rounded">
             <CommandCenter />
           </div>
         </div>
 
-        {/* Column 2: Mother Rover (Hero Node Centerpiece) & Scouts */}
-        <div className="space-y-6">
-          {/* Mother Rover (Hero Node) - Visual Centerpiece */}
-          <div>
-            <div className="flex justify-between items-center mb-3 font-mono">
-              <span className="text-xs font-semibold text-slate-400 tracking-wider uppercase">HERO_NODE // CORE_TELEMETRY</span>
-              <span className="text-[8px] text-cyan-400 font-bold uppercase tracking-widest">PRIMARY DATA STREAM</span>
-            </div>
-            <MotherRoverCard rover={motherRover} />
-          </div>
-
-          {/* Scout Fleet Grid */}
+        {/* Column 2: Scout Fleet Grid */}
+        <div className="space-y-6 lg:col-span-1">
           <div className="space-y-3">
             <div className="flex justify-between items-center font-mono">
               <span className="text-xs font-semibold text-slate-400 tracking-wider uppercase">SCOUT_FLEET // RECON_UNITS</span>
               <span className="text-[9px] text-slate-500">UNITS LINKED: {scoutRovers.length}</span>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-4">
               {scoutRovers.map((scout) => (
                 <ScoutCard key={scout.id} rover={scout} />
               ))}
@@ -98,7 +92,7 @@ export default function MissionControlPage() {
           </div>
         </div>
 
-        {/* Column 3: Timeline Checklist & Alerts Panel */}
+        {/* Column 3: Chronological Timeline Checklist & Active Alerts */}
         <div className="lg:col-span-2 xl:col-span-1 space-y-6">
           <div className="p-5 border border-slate-800 bg-slate-950/20 rounded">
             <MissionTimeline />
