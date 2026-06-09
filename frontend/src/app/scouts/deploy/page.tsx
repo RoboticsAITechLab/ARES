@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useMissionStore } from "@/store/mission-store";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { ArrowLeft, Rocket, ShieldAlert, Cpu, Calendar, Route } from "lucide-react";
+import { ArrowLeft, Rocket, ShieldAlert, Cpu, Calendar, Route, FolderOpenDot } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function DeployScoutPage() {
@@ -216,3 +216,4 @@ export default function DeployScoutPage() {
     </div>
   );
 }
+
