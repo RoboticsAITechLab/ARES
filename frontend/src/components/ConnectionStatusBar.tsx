@@ -1,0 +1,45 @@
+"use client";
+
+import { useMissionStore } from "@/lib/store";
+import { cn } from "@/lib/utils";
+import { Wifi, AlertCircle, ShieldAlert } from "lucide-react";
+
+export default function ConnectionStatusBar() {
+  const { isConnected, isEmergencyStop, systemHealth } = useMissionStore();
+
+  const isDegraded = Object.values(systemHealth).some(v => v === "DEGRADED" || v === "OFFLINE");
+
+  if (isEmergencyStop) {
+    return (
+      <div className="bg-rose-500/10 border-b border-rose-500/30 text-rose-400 py-1.5 px-4 sm:px-6 text-[9px] font-mono font-bold flex items-center justify-between animate-pulse select-none z-20 shrink-0">
+        <span className="flex items-center gap-1.5 truncate">
+          <ShieldAlert className="h-3.5 w-3.5 text-rose-500 shrink-0" />
+          <span className="truncate">MANUAL EMERGENCY ABORT SEQUENCE ENGAGED // KINETIC SAFE MODE ACTIVE</span>
+        </span>
+        <span className="tracking-widest hidden sm:inline text-right shrink-0">STATE: FAILSAFE_LOCK</span>
+      </div>
+    );
+  }
+
+  if (isDegraded) {
+    return (
+      <div className="bg-amber-500/10 border-b border-amber-500/30 text-amber-300 py-1.5 px-4 sm:px-6 text-[9px] font-mono font-bold flex items-center justify-between select-none z-20 shrink-0">
+        <span className="flex items-center gap-1.5 truncate">
+          <AlertCircle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+          <span className="truncate">SIMULATION TELEMETRY FEED DEGRADED // COMMS RELAY LATENCY ELEVATED</span>
+        </span>
+        <span className="tracking-widest hidden sm:inline text-right shrink-0">STATE: SYSTEM_WARNING</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-[#0A0F1C]/45 border-b border-emerald-500/25 text-emerald-400 py-1 px-4 sm:px-6 text-[9px] font-mono font-bold flex items-center justify-between select-none z-20 shrink-0">
+      <span className="flex items-center gap-1.5 truncate">
+        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-status-pulse shrink-0"></span>
+        <span className="truncate">DSN LINK LOCKED // Mars Express Relay (Sol 142)</span>
+      </span>
+      <span className="tracking-widest text-[8px] text-slate-500 hidden sm:inline shrink-0">BANDWIDTH: NOMINAL [144KBPS]</span>
+    </div>
+  );
+}

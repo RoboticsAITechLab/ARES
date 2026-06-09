@@ -108,6 +108,15 @@
   --sidebar-accent-foreground: #06B6D4;
   --sidebar-border: #1F2937;
   --sidebar-ring: #06B6D4;
+
+  /* ARES Custom Design Tokens */
+  --ares-primary: #06B6D4;
+  --ares-secondary: #1E293B;
+  --ares-success: #10B981;
+  --ares-warning: #F59E0B;
+  --ares-critical: #EF4444;
+  --ares-bg: #050811;
+  --ares-card: #0C1222;
 }
 
 @layer base {
@@ -115,9 +124,158 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-[#050811] text-slate-100;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
   html {
     @apply font-sans;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(6, 182, 212, 0.2) rgba(15, 23, 42, 0.3);
+  }
+}
+
+/* Custom Scrollbar Styles */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(10, 15, 28, 0.6);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(6, 182, 212, 0.2);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(6, 182, 212, 0.4);
+}
+
+/* Sci-fi CSS Keyframe Animations */
+@keyframes radar-pulse {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+@keyframes status-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+    filter: drop-shadow(0 0 2px currentColor);
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.7;
+    filter: drop-shadow(0 0 5px currentColor);
+  }
+}
+
+@keyframes scanline {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes text-glow {
+  0%, 100% {
+    text-shadow: 0 0 4px rgba(6, 182, 212, 0.4);
+  }
+  50% {
+    text-shadow: 0 0 8px rgba(6, 182, 212, 0.8), 0 0 12px rgba(6, 182, 212, 0.4);
+  }
+}
+
+/* Animation Classes */
+.animate-radar {
+  animation: radar-pulse 3s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+  transform-origin: center;
+}
+
+.animate-status-pulse {
+  animation: status-pulse 2s infinite ease-in-out;
+}
+
+.animate-glow {
+  animation: text-glow 3s infinite ease-in-out;
+}
+
+/* Sci-fi Terminal/CRT Scanline Overlay */
+.crt-monitor {
+  position: relative;
+  overflow: hidden;
+}
+
+.crt-monitor::after {
+  content: " ";
+  display: block;
+  position: absolute;
+  top: 0; left: 0; bottom: 0; right: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+  z-index: 2;
+  background-size: 100% 3px, 6px 100%;
+  pointer-events: none;
+}
+
+.crt-scanline {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: rgba(6, 182, 212, 0.06);
+  z-index: 3;
+  pointer-events: none;
+  animation: scanline 8s linear infinite;
+}
+
+/* Corner Bracket Card styling */
+.cyber-card {
+  position: relative;
+  background: var(--ares-card);
+  border: 1px solid rgba(6, 182, 212, 0.15);
+}
+
+.cyber-card::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  width: 8px;
+  height: 8px;
+  border-top: 2px solid var(--ares-primary);
+  border-left: 2px solid var(--ares-primary);
+}
+
+.cyber-card::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 8px;
+  height: 8px;
+  border-bottom: 2px solid var(--ares-primary);
+  border-right: 2px solid var(--ares-primary);
+}
+
+/* Accessibility: Support prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .animate-radar,
+  .animate-status-pulse,
+  .animate-glow,
+  .crt-scanline,
+  .animate-spin {
+    animation: none !important;
+    transition: none !important;
   }
 }

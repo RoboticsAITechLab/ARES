@@ -1,29 +1,33 @@
 "use client";
 
 import { Compass } from "lucide-react";
-import { mockRovers } from "@/lib/mock-data";
-import { MISSION_INFO, MISSION_METRICS } from "@/lib/constants";
+import { useMissionStore } from "@/lib/store";
+import { MISSION_INFO } from "@/lib/constants";
 import MotherRoverCard from "@/components/mission/mother-rover-card";
 import ScoutCard from "@/components/mission/scout-card";
-import CommandCenter from "@/components/mission/command-center";
 import Alerts from "@/components/mission/alerts";
 import MissionTimeline from "@/components/mission/mission-timeline";
+import QuickActions from "@/components/QuickActions";
+import SystemHealth from "@/components/SystemHealth";
 
 export default function MissionControlPage() {
-  const motherRover = mockRovers.find((r) => r.type === "mother")!;
-  const scoutRovers = mockRovers.filter((r) => r.type === "scout");
+  const { rovers, alerts, isEmergencyStop } = useMissionStore();
+
+  const motherRover = rovers.find((r) => r.type === "mother")!;
+  const scoutRovers = rovers.filter((r) => r.type === "scout");
+  const activeAlertsCount = alerts.filter(a => a.severity === "critical" || a.severity === "warning").length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 select-none animate-fade-in">
       {/* 1. Mission Status Banner */}
-      <div className="p-4 rounded border border-slate-800 bg-[#111827] font-mono flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="p-4 rounded border border-slate-800 bg-[#111827] font-mono flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-lg">
         {/* Left Section: Target Info */}
         <div className="flex items-center gap-3">
-          <Compass className="h-6 w-6 text-cyan-400 shrink-0" />
+          <Compass className="h-6 w-6 text-cyan-400 shrink-0 animate-status-pulse" />
           <div>
-            <div className="text-[9px] text-slate-500 tracking-wider uppercase">MISSION OBJECTIVES STATUS</div>
-            <h1 className="text-sm font-bold text-white tracking-widest uppercase">
-              {MISSION_INFO.name} // SURFACE OPERATIONS BANNER
+            <div className="text-[9px] text-slate-500 tracking-wider uppercase font-bold">MISSION TARGET LOCATION</div>
+            <h1 className="text-sm font-black text-white tracking-widest uppercase">
+              {MISSION_INFO.name} <span className="text-slate-700">//</span> {MISSION_INFO.target.toUpperCase()}
             </h1>
           </div>
         </div>
@@ -31,50 +35,46 @@ export default function MissionControlPage() {
         {/* Dynamic Telemetry Metrics Panel */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:flex lg:items-center gap-3 text-[10px]">
           {/* Phase */}
-          <div className="bg-slate-950 border border-slate-850 px-3 py-1.5 rounded flex flex-col min-w-[100px]">
-            <span className="text-[7px] text-slate-500 uppercase leading-none">CURRENT PHASE</span>
-            <span className="font-bold text-cyan-300 mt-1">{MISSION_INFO.phase}</span>
+          <div className="bg-slate-950 border border-slate-800/80 px-3 py-1.5 rounded flex flex-col min-w-[100px]">
+            <span className="text-[7px] text-slate-500 uppercase leading-none font-bold">CURRENT PHASE</span>
+            <span className="font-extrabold text-cyan-400 mt-1">{MISSION_INFO.phase}</span>
           </div>
 
           {/* Area Explored */}
-          <div className="bg-slate-950 border border-slate-850 px-3 py-1.5 rounded flex flex-col min-w-[100px]">
-            <span className="text-[7px] text-slate-500 uppercase leading-none">AREA EXPLORED</span>
-            <span className="font-bold text-slate-200 mt-1">{MISSION_METRICS.areaExplored}%</span>
+          <div className="bg-slate-950 border border-slate-800/80 px-3 py-1.5 rounded flex flex-col min-w-[100px]">
+            <span className="text-[7px] text-slate-500 uppercase leading-none font-bold">AREA EXPLORED</span>
+            <span className="font-extrabold text-slate-200 mt-1">34.20%</span>
           </div>
 
           {/* Samples Collected */}
-          <div className="bg-slate-950 border border-slate-850 px-3 py-1.5 rounded flex flex-col min-w-[100px]">
-            <span className="text-[7px] text-slate-500 uppercase leading-none">SAMPLES RETRIEVED</span>
-            <span className="font-bold text-slate-200 mt-1">{MISSION_METRICS.samplesCollected} / 50</span>
+          <div className="bg-slate-950 border border-slate-800/80 px-3 py-1.5 rounded flex flex-col min-w-[100px]">
+            <span className="text-[7px] text-slate-500 uppercase leading-none font-bold">SAMPLES COLLECTED</span>
+            <span className="font-extrabold text-slate-200 mt-1">18 / 50</span>
           </div>
 
           {/* Hazards Detected */}
-          <div className="bg-slate-950 border border-slate-850 px-3 py-1.5 rounded flex flex-col min-w-[100px]">
-            <span className="text-[7px] text-slate-500 uppercase leading-none">HAZARDS DETECTED</span>
-            <span className="font-bold text-rose-400 mt-1">{MISSION_METRICS.hazardsDetected} ACTIVE</span>
+          <div className="bg-slate-950 border border-slate-800/80 px-3 py-1.5 rounded flex flex-col min-w-[100px]">
+            <span className="text-[7px] text-slate-500 uppercase leading-none font-bold">HAZARDS SECTOR</span>
+            <span className="font-extrabold text-rose-400 mt-1 animate-pulse">6 ACTIVE</span>
           </div>
         </div>
       </div>
 
-      {/* Operations Grid: 
-          Desktop: 3 columns (xl)
-          Laptop/Tablet: 2 columns (lg)
-          Mobile: 1 column */}
+      {/* Grid: Stacks to 1 column on mobile, 2 columns on lg, 3 columns on xl */}
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 items-start">
-        
         {/* Column 1: Mother Rover (Primary Command Node) & Directives Override */}
         <div className="space-y-6 lg:col-span-1">
           <div>
             <div className="flex justify-between items-center mb-3 font-mono">
-              <span className="text-xs font-semibold text-slate-400 tracking-wider uppercase">COMMAND_NODE // METRICS</span>
-              <span className="text-[8px] text-cyan-405 font-bold uppercase tracking-widest">PRIMARY TELEMETRY</span>
+              <span className="text-xs font-semibold text-slate-400 tracking-wider uppercase">COMMAND_NODE // PRIMARY</span>
+              <span className="text-[8px] text-cyan-400 font-extrabold uppercase tracking-widest animate-glow">
+                DSN LINK STATUS: ACTIVE
+              </span>
             </div>
             <MotherRoverCard rover={motherRover} />
           </div>
 
-          <div className="p-5 border border-slate-800 bg-slate-950/20 rounded">
-            <CommandCenter />
-          </div>
+          <QuickActions />
         </div>
 
         {/* Column 2: Scout Fleet Grid */}
@@ -82,7 +82,7 @@ export default function MissionControlPage() {
           <div className="space-y-3">
             <div className="flex justify-between items-center font-mono">
               <span className="text-xs font-semibold text-slate-400 tracking-wider uppercase">SCOUT_FLEET // RECON_UNITS</span>
-              <span className="text-[9px] text-slate-500">UNITS LINKED: {scoutRovers.length}</span>
+              <span className="text-[9px] text-slate-500 font-bold">UNITS LINKED: {scoutRovers.length}</span>
             </div>
             <div className="grid grid-cols-1 gap-4">
               {scoutRovers.map((scout) => (
@@ -92,17 +92,18 @@ export default function MissionControlPage() {
           </div>
         </div>
 
-        {/* Column 3: Chronological Timeline Checklist & Active Alerts */}
+        {/* Column 3: System Health, Timeline milestones & Alerts */}
         <div className="lg:col-span-2 xl:col-span-1 space-y-6">
-          <div className="p-5 border border-slate-800 bg-slate-950/20 rounded">
+          <SystemHealth />
+
+          <div className="p-5 border border-slate-800 bg-slate-950/20 rounded shadow-md">
             <MissionTimeline />
           </div>
-          
-          <div className="p-5 border border-slate-800 bg-slate-950/20 rounded">
+
+          <div className="p-5 border border-slate-800 bg-slate-950/20 rounded shadow-md">
             <Alerts />
           </div>
         </div>
-
       </div>
     </div>
   );
