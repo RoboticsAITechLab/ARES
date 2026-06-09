@@ -49,14 +49,8 @@ export default function Sidebar() {
   
   const links = [
     { name: "Mission Control", path: "/mission-control", icon: "LayoutDashboard" },
-    { name: "Mission Planner", path: "/planner", icon: "Calendar" },
-    { name: "Rovers", path: "/rovers", icon: "Cpu" },
     { name: "Live Map", path: "/map", icon: "Map" },
-    { name: "Telemetry", path: "/telemetry", icon: "Activity" },
-    { name: "Events Center", path: "/events", icon: "List" },
-    { name: "Scouts Ops", path: "/scouts", icon: "Radio" },
-    { name: "Operations", path: "/operations", icon: "Settings" },
-    { name: "Settings", path: "/settings", icon: "Sliders" }
+    { name: "Telemetry", path: "/telemetry", icon: "Activity" }
   ];
 
   const motherRover = rovers.find((r) => r.type === "mother")!;

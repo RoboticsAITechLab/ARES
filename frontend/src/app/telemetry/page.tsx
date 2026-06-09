@@ -1,13 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { Activity, Battery, Wifi, Thermometer, Cpu, ShieldAlert, FileText } from "lucide-react";
+import { Activity, Battery, Wifi, Thermometer, Cpu, ShieldAlert, FileText, Gauge } from "lucide-react";
 import { useMissionStore } from "@/store/mission-store";
 import TelemetryCard from "@/components/TelemetryCard";
 
 export default function TelemetryPage() {
+  const { rovers, events, isEmergencyStop, telemetryHistory } = useMissionStore();
+  const [selectedRoverId, setSelectedRoverId] = useState<string>(rovers[0]?.id || "mother-rover");
   const [logFilter, setLogFilter] = useState<"all" | "nominal" | "warning" | "critical">("all");
-  const { rovers, events, isEmergencyStop } = useMissionStore();
+
+  const rover = rovers.find((r) => r.id === selectedRoverId) || rovers[0];
+  const historyData = telemetryHistory[selectedRoverId] || [];
 
   const filteredLogs = events.filter((log) => {
     if (logFilter === "all") return true;
@@ -28,12 +32,76 @@ export default function TelemetryPage() {
     }
   };
 
-  const motherRover = rovers.find((r) => r.type === "mother")!;
-  const scoutRovers = rovers.filter((r) => r.type === "scout");
+  // Pure SVG Line Chart Drawer
+  const renderSVGChart = (
+    key: "battery" | "signal" | "temperature" | "speed",
+    minVal: number,
+    maxVal: number,
+    colorClass: string,
+    glowClass: string,
+    unit: string
+  ) => {
+    const chartWidth = 500;
+    const chartHeight = 120;
+
+    if (historyData.length < 2) {
+      return (
+        <div className="h-[120px] flex items-center justify-center text-slate-650 text-[10px]">
+          WAITING FOR TELEMETRY DATA STREAM PACKETS...
+        </div>
+      );
+    }
+
+    const points = historyData.map((p, idx) => {
+      const val = p[key] ?? 0;
+      const x = (idx / (historyData.length - 1)) * chartWidth;
+      const y = chartHeight - ((val - minVal) / (maxVal - minVal)) * chartHeight;
+      return { x, y, val };
+    });
+
+    const pathD = points.map((p, idx) => `${idx === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
+    const areaD = `${pathD} L ${chartWidth} ${chartHeight} L 0 ${chartHeight} Z`;
+
+    return (
+      <div className="space-y-2 font-mono">
+        <div className="relative border border-slate-900 bg-slate-950 p-2 rounded overflow-hidden aspect-[4/1] flex items-center justify-center">
+          <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="w-full h-full text-slate-900 overflow-visible">
+            {/* Grid Lines */}
+            <line x1="0" y1={chartHeight * 0.25} x2={chartWidth} y2={chartHeight * 0.25} stroke="rgba(30, 41, 59, 0.25)" strokeWidth="0.5" />
+            <line x1="0" y1={chartHeight * 0.5} x2={chartWidth} y2={chartHeight * 0.5} stroke="rgba(30, 41, 59, 0.25)" strokeWidth="0.5" />
+            <line x1="0" y1={chartHeight * 0.75} x2={chartWidth} y2={chartHeight * 0.75} stroke="rgba(30, 41, 59, 0.25)" strokeWidth="0.5" />
+
+            {/* Area fill */}
+            <path d={areaD} className={`fill-current opacity-5 ${colorClass}`} />
+
+            {/* Line path */}
+            <path d={pathD} className={`fill-none stroke-current ${colorClass} ${glowClass}`} strokeWidth="1.8" />
+
+            {/* Dots */}
+            {points.map((p, idx) => (
+              <g key={idx}>
+                <circle cx={p.x} cy={p.y} r="2.5" className={`fill-current ${colorClass}`} />
+                {idx === points.length - 1 && (
+                  <circle cx={p.x} cy={p.y} r="6" className={`fill-none stroke-current animate-ping ${colorClass}`} strokeWidth="0.8" />
+                )}
+              </g>
+            ))}
+          </svg>
+        </div>
+
+        {/* Legend / Range labels */}
+        <div className="flex justify-between text-[8px] text-slate-500 select-none">
+          <span>Sol {historyData[0].sol}</span>
+          <span className="font-bold uppercase">Uplink: NOMINAL // Last: {historyData[historyData.length - 1][key]?.toFixed(1)}{unit}</span>
+          <span>Sol {historyData[historyData.length - 1].sol}</span>
+        </div>
+      </div>
+    );
+  };
 
   return (
-    <div className="space-y-6 font-mono animate-fade-in">
-      {/* 1. Simulated Telemetry Warning Banner (No Blinking) */}
+    <div className="space-y-6 font-mono animate-fade-in text-slate-100">
+      {/* 1. Simulated Telemetry Warning Banner */}
       <div className="p-3.5 rounded border border-amber-500/20 bg-amber-500/5 text-amber-300 text-[10px] flex items-center gap-3 select-none">
         <ShieldAlert className="h-4 w-4 shrink-0 text-amber-400" />
         <div>
@@ -44,8 +112,8 @@ export default function TelemetryPage() {
         </div>
       </div>
 
-      {/* Page Header */}
-      <div className="p-4 rounded border border-slate-800 bg-[#111827] flex items-center justify-between shadow-lg select-none">
+      {/* Page Header with Dropdown */}
+      <div className="p-4 rounded border border-slate-800 bg-[#111827] flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg select-none">
         <div className="flex items-center gap-3">
           <Activity className="h-5 w-5 text-cyan-400 animate-status-pulse" />
           <div>
@@ -55,171 +123,129 @@ export default function TelemetryPage() {
             </h1>
           </div>
         </div>
-        <div className="text-[10px] text-slate-500 uppercase font-bold">
-          DSN LOCK: SECURE
+
+        <div className="flex items-center gap-2.5 text-[10px]">
+          <span className="text-slate-500 font-bold uppercase">SELECT VEHICLE:</span>
+          <select
+            value={selectedRoverId}
+            onChange={(e) => setSelectedRoverId(e.target.value)}
+            className="bg-slate-950 border border-slate-800 text-slate-350 p-2 rounded focus:outline-none focus:border-cyan-500/40 font-bold text-[10px] cursor-pointer"
+          >
+            {rovers.map(r => (
+              <option key={r.id} value={r.id}>{r.name.toUpperCase()}</option>
+            ))}
+          </select>
         </div>
       </div>
 
-      {/* Grid: Prioritizing Mother Rover first, then Scouts, then Operations Log */}
+      {/* Main Grid: Telemetry Dashboard & Operations Log */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         
-        {/* Left Section (takes 2/3 width on desktop/laptop) */}
+        {/* Left Section: Active vehicle metrics and SVGs charts (takes 2/3 width) */}
         <div className="lg:col-span-2 space-y-6">
           
-          {/* ARES MotherShip - Hero (1st Priority) */}
-          <div className="space-y-3">
-            <div className="flex justify-between items-center text-xs text-slate-400 tracking-wider uppercase select-none">
-              <span>Primary Commander Telemetry</span>
-              <span className="text-[9px] text-cyan-400 font-bold">Node: {motherRover.id}</span>
+          {/* Diagnostic Metrics Cards */}
+          <div className="p-5 rounded border border-slate-800 bg-[#111827] space-y-4 shadow-md">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3 select-none">
+              <h2 className="text-sm font-black text-white tracking-wider uppercase">
+                {rover.name} // CORE_HEALTH
+              </h2>
+              <span className={`text-[8px] px-2 py-0.5 rounded border uppercase tracking-widest font-extrabold ${
+                isEmergencyStop 
+                  ? "border-rose-500/35 bg-rose-500/5 text-rose-400 animate-pulse" 
+                  : "border-slate-800 bg-slate-950/40 text-slate-400"
+              }`}>
+                {isEmergencyStop ? "FAILSAFE_STOP" : rover.status}
+              </span>
             </div>
-            
-            <div className="p-5 rounded border border-slate-800 bg-[#111827] space-y-4 shadow-md">
-              <div className="flex justify-between items-center border-b border-slate-800/80 pb-3 select-none">
-                <h2 className="text-sm font-black text-white tracking-wider uppercase">
-                  {motherRover.name} // COM_NODE
-                </h2>
-                <span className={`text-[8px] px-2 py-0.5 rounded border uppercase tracking-widest font-extrabold ${
-                  isEmergencyStop 
-                    ? "border-rose-500/35 bg-rose-500/5 text-rose-400" 
-                    : "border-slate-850 bg-slate-950/40 text-slate-400"
-                }`}>
-                  {isEmergencyStop ? "FAILSAFE_STOP" : "ONLINE_ACTIVE"}
-                </span>
-              </div>
 
-              {/* Mother Rover Metrics Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                <TelemetryCard
-                  label="Power core Capacity"
-                  value={motherRover.battery}
-                  unit="%"
-                  status={motherRover.battery < 40 ? "warning" : "nominal"}
-                  trend="stable"
-                  percent={motherRover.battery}
-                />
-                
-                <TelemetryCard
-                  label="Orbital DSN lock"
-                  value={motherRover.signal}
-                  unit="%"
-                  status={isEmergencyStop ? "warning" : "nominal"}
-                  trend={isEmergencyStop ? "down" : "stable"}
-                  percent={motherRover.signal}
-                />
+            {/* Metrics cards grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <TelemetryCard
+                label="Power Core Capacity"
+                value={rover.battery}
+                unit="%"
+                status={rover.battery < 40 ? "warning" : "nominal"}
+                trend="stable"
+                percent={rover.battery}
+              />
+              
+              <TelemetryCard
+                label="Orbital DSN Lock"
+                value={rover.signal}
+                unit="%"
+                status={rover.signal < 50 ? "warning" : "nominal"}
+                trend="stable"
+                percent={rover.signal}
+              />
 
-                <TelemetryCard
-                  label="CPU core load"
-                  value={motherRover.cpu}
-                  unit="%"
-                  status={motherRover.cpu > 80 ? "warning" : "nominal"}
-                  trend={motherRover.cpu > 70 ? "up" : "stable"}
-                  percent={motherRover.cpu}
-                />
+              <TelemetryCard
+                label="Thermal Core Temp"
+                value={rover.temperature}
+                unit="°C"
+                status={rover.temperature > 40 || rover.temperature < -40 ? "warning" : "nominal"}
+                trend="stable"
+              />
 
-                <TelemetryCard
-                  label="Memory buffer"
-                  value={motherRover.memory}
-                  unit="%"
-                  percent={motherRover.memory}
-                />
-
-                <TelemetryCard
-                  label="Thermal core temp"
-                  value={motherRover.temperature}
-                  unit="°C"
-                  status={motherRover.temperature > 40 ? "warning" : "nominal"}
-                  trend="stable"
-                />
-
-                <TelemetryCard
-                  label="Total node health"
-                  value={motherRover.health}
-                  unit="%"
-                  status={motherRover.health < 85 ? "warning" : "nominal"}
-                  trend={isEmergencyStop ? "down" : "stable"}
-                />
-              </div>
+              <TelemetryCard
+                label="Node Velocity"
+                value={rover.speed}
+                unit=" m/s"
+                status="nominal"
+                trend="stable"
+              />
             </div>
           </div>
 
-          {/* Scout Fleet Telemetry - Subordinate (2nd Priority) */}
-          <div className="space-y-3">
-            <h3 className="text-xs font-semibold text-slate-400 tracking-wider uppercase select-none">
-              Subordinate Scout Fleet Telemetry
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {scoutRovers.map((scout) => (
-                <div key={scout.id} className="p-4 rounded border border-slate-850 bg-[#111827] space-y-4 shadow-md">
-                  <div className="flex justify-between items-center border-b border-slate-800/80 pb-2 select-none">
-                    <h4 className="text-xs font-black text-white tracking-widest uppercase">{scout.name}</h4>
-                    <span className={`text-[8px] px-1.5 py-0.2 rounded border font-extrabold uppercase ${
-                      scout.status === "ERROR" || scout.status === "OFFLINE"
-                        ? "border-rose-500/30 text-rose-500 animate-pulse" 
-                        : scout.status === "EXPLORING" || scout.status === "RETURNING"
-                        ? "border-amber-500/20 text-amber-400"
-                        : "border-slate-800 text-slate-400"
-                    }`}>
-                      {scout.status}
-                    </span>
-                  </div>
+          {/* Diagnostic SVG History Charts */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Battery History */}
+            <div className="p-4 rounded border border-slate-800 bg-[#111827] space-y-3 shadow-md">
+              <h3 className="text-xs font-bold text-slate-400 tracking-wider flex items-center gap-1.5 uppercase select-none">
+                <Battery className="h-4 w-4 text-cyan-400" />
+                POWER_CORE_HISTORY (BATTERY)
+              </h3>
+              {renderSVGChart("battery", 0, 100, "text-cyan-400", "shadow-[0_0_10px_rgba(6,182,212,0.4)]", "%")}
+            </div>
 
-                  {/* Scout Metrics */}
-                  <div className="grid grid-cols-2 gap-4 text-[9px] text-slate-400">
-                    <div className="space-y-1">
-                      <div className="flex justify-between font-bold">
-                        <span className="flex items-center gap-1"><Battery className="h-3 w-3 text-cyan-400" /> BAT</span>
-                        <span className="text-slate-300 font-extrabold">{scout.battery}%</span>
-                      </div>
-                      <div className="h-0.5 w-full bg-slate-950 rounded-full overflow-hidden">
-                        <div className={`h-full ${scout.battery < 40 ? "bg-rose-500" : "bg-cyan-500"}`} style={{ width: `${scout.battery}%` }}></div>
-                      </div>
-                    </div>
+            {/* Signal History */}
+            <div className="p-4 rounded border border-slate-800 bg-[#111827] space-y-3 shadow-md">
+              <h3 className="text-xs font-bold text-slate-400 tracking-wider flex items-center gap-1.5 uppercase select-none">
+                <Wifi className="h-4 w-4 text-emerald-400" />
+                ORBITAL_LINK_HISTORY (SIGNAL)
+              </h3>
+              {renderSVGChart("signal", 0, 100, "text-emerald-400", "shadow-[0_0_10px_rgba(16,185,129,0.4)]", "%")}
+            </div>
 
-                    <div className="space-y-1">
-                      <div className="flex justify-between font-bold">
-                        <span className="flex items-center gap-1"><Wifi className="h-3 w-3 text-cyan-400" /> LNK</span>
-                        <span className="text-slate-300 font-extrabold">{scout.signal}%</span>
-                      </div>
-                      <div className="h-0.5 w-full bg-slate-950 rounded-full overflow-hidden">
-                        <div className="h-full bg-cyan-500" style={{ width: `${scout.signal}%` }}></div>
-                      </div>
-                    </div>
+            {/* Temp History */}
+            <div className="p-4 rounded border border-slate-800 bg-[#111827] space-y-3 shadow-md">
+              <h3 className="text-xs font-bold text-slate-400 tracking-wider flex items-center gap-1.5 uppercase select-none">
+                <Thermometer className="h-4 w-4 text-purple-400" />
+                THERMAL_SWEEPER_HISTORY (TEMP)
+              </h3>
+              {renderSVGChart("temperature", -100, 150, "text-purple-400", "shadow-[0_0_10px_rgba(168,85,247,0.4)]", "°C")}
+            </div>
 
-                    <div className="flex justify-between pt-1 border-t border-slate-800/60 font-semibold col-span-2">
-                      <span className="flex items-center gap-1"><Cpu className="h-3.5 w-3.5 text-slate-500" /> CPU LOAD:</span>
-                      <span className="text-slate-200 font-bold">{scout.cpu}%</span>
-                    </div>
-
-                    <div className="flex justify-between font-semibold col-span-2">
-                      <span className="flex items-center gap-1"><Cpu className="h-3.5 w-3.5 text-slate-500" /> MEM MEMORY:</span>
-                      <span className="text-slate-200 font-bold">{scout.memory}%</span>
-                    </div>
-
-                    <div className="flex justify-between font-semibold col-span-2">
-                      <span className="flex items-center gap-1"><Thermometer className="h-3.5 w-3.5 text-slate-500" /> THERM CORE:</span>
-                      <span className="text-slate-200 font-bold">{scout.temperature}°C</span>
-                    </div>
-
-                    <div className="flex justify-between font-semibold col-span-2">
-                      <span className="flex items-center gap-1"><Activity className="h-3.5 w-3.5 text-slate-500" /> SYS HEALTH:</span>
-                      <span className="text-slate-200 font-bold">{scout.health}%</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
+            {/* Speed/Velocity History */}
+            <div className="p-4 rounded border border-slate-800 bg-[#111827] space-y-3 shadow-md">
+              <h3 className="text-xs font-bold text-slate-400 tracking-wider flex items-center gap-1.5 uppercase select-none">
+                <Gauge className="h-4 w-4 text-amber-400" />
+                VELOCITY_HISTORY (SPEED)
+              </h3>
+              {renderSVGChart("speed", 0, 3, "text-amber-400", "shadow-[0_0_10px_rgba(245,158,11,0.4)]", " m/s")}
             </div>
           </div>
 
         </div>
 
-        {/* Right Section: Operations Log (3rd Priority) */}
-        <div className="p-5 border border-slate-800 bg-[#111827] rounded flex flex-col h-[580px] shadow-md">
+        {/* Right Section: Operations Log (takes 1/3 width) */}
+        <div className="p-5 border border-slate-800 bg-[#111827] rounded flex flex-col h-[650px] shadow-md">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 select-none">
             <h2 className="text-xs font-semibold text-slate-400 tracking-wider flex items-center gap-1.5 uppercase">
               <FileText className="h-3.5 w-3.5 text-cyan-400" />
               OPERATIONAL_LOGS
             </h2>
-            <div className="flex gap-1 border border-slate-800 bg-slate-950 p-0.5 rounded text-[8px] max-w-fit">
+            <div className="flex gap-1 border border-slate-800 bg-slate-950 p-0.5 rounded text-[8px] max-w-fit font-bold">
               {["all", "nominal", "warning", "critical"].map((lvl) => (
                 <button
                   key={lvl}
@@ -227,7 +253,7 @@ export default function TelemetryPage() {
                   className={`px-2 py-0.5 rounded transition uppercase tracking-wider font-bold cursor-pointer ${
                     logFilter === lvl
                       ? "bg-slate-800 text-cyan-400"
-                      : "text-slate-500 hover:text-slate-300"
+                      : "text-slate-500 hover:text-slate-350"
                   }`}
                 >
                   {lvl}
@@ -236,7 +262,7 @@ export default function TelemetryPage() {
             </div>
           </div>
 
-          {/* CRT Monitor styled Terminal log box */}
+          {/* CRT monitor style */}
           <div className="crt-monitor relative flex-1 min-h-[350px] overflow-hidden rounded border border-slate-900 bg-[#060913] flex flex-col">
             <div className="crt-scanline"></div>
             
@@ -252,7 +278,7 @@ export default function TelemetryPage() {
                   </div>
                 ))
               ) : (
-                <div className="h-full flex items-center justify-center text-slate-600 font-bold select-none">
+                <div className="h-full flex items-center justify-center text-slate-600 font-bold select-none text-center uppercase">
                   NO LOG SEGMENTS RECORDED AT THIS FILTER LEVEL
                 </div>
               )}

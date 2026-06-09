@@ -63,15 +63,6 @@ export default function MissionControlPage() {
             <span className="font-extrabold text-rose-400 mt-1 animate-pulse">6 ACTIVE</span>
           </div>
         </div>
-
-        {/* Action Link to enter execution room */}
-        <Link
-          href="/mission-control/execution"
-          className="flex items-center justify-center gap-1.5 px-4 py-2 border border-cyan-500 bg-cyan-500/10 text-cyan-400 rounded text-[10px] font-extrabold uppercase hover:bg-cyan-500/20 transition cursor-pointer shadow-[0_0_15px_rgba(6,182,212,0.1)] shrink-0 self-start xl:self-auto"
-        >
-          <PlaySquare className="h-3.5 w-3.5" />
-          ENTER EXECUTION CENTER
-        </Link>
       </div>
 
       {/* Grid: Stacks to 1 column on mobile, 2 columns on lg, 3 columns on xl */}
