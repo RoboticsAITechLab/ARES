@@ -1,18 +1,28 @@
 "use client";
 
 import { Battery, Wifi, MapPin, Gauge, Thermometer, Cpu, Heart, Layers } from "lucide-react";
-import { Rover } from "@/lib/types";
+import { MotherRover } from "@/types/MotherRover";
 import { STATUS_STYLES } from "@/lib/constants";
 
 interface MotherRoverCardProps {
-  rover: Rover;
+  rover: MotherRover | null;
 }
 
 export default function MotherRoverCard({ rover }: MotherRoverCardProps) {
-  const style = STATUS_STYLES[rover.status as keyof typeof STATUS_STYLES] || STATUS_STYLES.online;
+  if (!rover) {
+    return (
+      <div className="relative overflow-hidden rounded border border-dashed border-slate-800 bg-[#111827]/40 p-8 flex flex-col items-center justify-center text-center font-mono text-slate-500 text-xs gap-2 min-h-[300px] select-none">
+        <Layers className="h-8 w-8 text-slate-600 animate-pulse" />
+        <span className="font-bold tracking-widest text-slate-400 uppercase">NO PRIMARY ROVER DETECTED</span>
+        <span className="text-[10px] text-slate-600">Waiting for DSN telemetry packet to establish transceiver link...</span>
+      </div>
+    );
+  }
+
+  const style = rover.status === "online" ? STATUS_STYLES.online : STATUS_STYLES.critical;
 
   return (
-    <div className="relative overflow-hidden rounded border-2 border-cyan-500/50 bg-[#111827] shadow-[0_0_30px_rgba(6,182,212,0.15)] flex flex-col">
+    <div className="relative overflow-hidden rounded border-2 border-cyan-500/50 bg-[#111827] shadow-[0_0_30px_rgba(6,182,212,0.15)] flex flex-col select-none">
       {/* Thick Cyan Aerospace Top Banner */}
       <div className="h-1.5 bg-cyan-500 w-full"></div>
 
@@ -29,7 +39,7 @@ export default function MotherRoverCard({ rover }: MotherRoverCardProps) {
             <div className="h-2 w-2 rounded-full bg-cyan-400"></div>
             <span className="text-slate-400 text-[10px] tracking-widest font-extrabold uppercase">PRIMARY GROUND COMMAND NODE</span>
           </div>
-          <h3 className="text-lg font-black text-white tracking-widest uppercase">{rover.name}</h3>
+          <h3 className="text-lg font-black text-white tracking-widest uppercase">{rover.id.toUpperCase()}</h3>
         </div>
         <div className="flex items-center gap-2.5">
           <span className="text-[9px] px-2 py-1 rounded font-bold border border-cyan-500 bg-cyan-500/10 text-cyan-400 uppercase tracking-widest">
@@ -49,7 +59,7 @@ export default function MotherRoverCard({ rover }: MotherRoverCardProps) {
           <span>Coordinates fleet exploration vectors and acts as primary DSN orbital transceiver link.</span>
         </div>
 
-        {/* Priority Telemetry Progress Bars (Thicker for Mother Rover) */}
+        {/* Priority Telemetry Progress Bars */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {/* Battery */}
           <div className="space-y-2">
@@ -89,10 +99,10 @@ export default function MotherRoverCard({ rover }: MotherRoverCardProps) {
         {/* Main stats readings */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div className="bg-slate-950/40 p-4 rounded border border-slate-850 flex flex-col justify-between min-h-[90px]">
-            <span className="text-slate-500 uppercase tracking-widest text-[8px] font-bold">VECTOR TARGET</span>
+            <span className="text-slate-500 uppercase tracking-widest text-[8px] font-bold">GRID LOCATION</span>
             <div className="mt-2 text-[11px] font-bold text-slate-200 tracking-wide space-y-0.5">
-              <div>LA {rover.latitude.toFixed(5)}</div>
-              <div>LO {rover.longitude.toFixed(5)}</div>
+              <div>GRID X: {rover.x}</div>
+              <div>GRID Y: {rover.y}</div>
             </div>
           </div>
 
@@ -113,8 +123,8 @@ export default function MotherRoverCard({ rover }: MotherRoverCardProps) {
           <div className="bg-slate-950/40 p-4 rounded border border-slate-850 flex flex-col justify-between min-h-[90px]">
             <span className="text-slate-500 uppercase tracking-widest text-[8px] font-bold">DIAGNOSTICS</span>
             <div className="mt-2 text-[10px] text-slate-300 font-semibold space-y-0.5">
-              <div className="flex justify-between"><span>CPU:</span><span>{rover.cpu}%</span></div>
-              <div className="flex justify-between"><span>MEM:</span><span>{rover.memory}%</span></div>
+              <div className="flex justify-between"><span>HEADING:</span><span>{rover.heading}°</span></div>
+              <div className="flex justify-between"><span>SCOUTS:</span><span>{rover.connectedScouts}</span></div>
             </div>
           </div>
         </div>
@@ -123,7 +133,7 @@ export default function MotherRoverCard({ rover }: MotherRoverCardProps) {
         <div className="border-t border-slate-800/80 pt-4">
           <div className="flex justify-between items-center text-[8px] text-slate-500 uppercase tracking-widest mb-3 font-bold">
             <span>CORE SUBSYSTEM DIAGNOSTICS</span>
-            <span className="text-cyan-500">SIMULATED FEED ACTIVE</span>
+            <span className="text-cyan-500">LIVE DSN LINK ACTIVE</span>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-[9px] text-slate-400">
             <div className="flex justify-between items-center border-b border-slate-900 pb-1.5">

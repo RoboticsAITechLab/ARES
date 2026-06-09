@@ -7,10 +7,41 @@ import MapSidebar from "@/components/map/MapSidebar";
 import { Navigation, RefreshCw } from "lucide-react";
 
 export default function MapPage() {
-  const { rovers, simulationConfig } = useMissionStore();
+  const { fleet, isConnected } = useMissionStore();
   const [selectedRoverId, setSelectedRoverId] = useState<string | null>(null);
 
-  const isRunning = simulationConfig.status === "RUNNING";
+  const isRunning = isConnected;
+
+  const gridToLatLon = (x: number, y: number) => {
+    const minLat = 18.60;
+    const maxLat = 18.70;
+    const minLon = 226.10;
+    const maxLon = 226.30;
+    return {
+      latitude: minLat + (y / 100) * (maxLat - minLat),
+      longitude: minLon + (x / 100) * (maxLon - minLon)
+    };
+  };
+
+  const virtualRovers: any[] = [];
+  if (fleet.mother) {
+    const { latitude, longitude } = gridToLatLon(fleet.mother.x, fleet.mother.y);
+    virtualRovers.push({
+      ...fleet.mother,
+      latitude,
+      longitude,
+      type: "mother" as const
+    });
+  }
+  fleet.scouts.forEach(s => {
+    const { latitude, longitude } = gridToLatLon(s.x, s.y);
+    virtualRovers.push({
+      ...s,
+      latitude,
+      longitude,
+      type: "scout" as const
+    });
+  });
 
   return (
     <div className="space-y-6 font-mono text-slate-100 animate-fade-in">
@@ -41,7 +72,7 @@ export default function MapPage() {
         {/* Legend / Rover Select Sidebar */}
         <div className="xl:col-span-1 h-full">
           <MapSidebar 
-            rovers={rovers} 
+            rovers={virtualRovers} 
             selectedRoverId={selectedRoverId} 
             onSelectRover={setSelectedRoverId} 
           />

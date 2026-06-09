@@ -1,11 +1,10 @@
 "use client";
 
-import { Rover } from "../../domain/rovers/types";
 import { cn } from "@/lib/utils";
 import { Cpu, Battery, Wifi, Compass, HelpCircle } from "lucide-react";
 
 interface MapSidebarProps {
-  rovers: Rover[];
+  rovers: any[];
   selectedRoverId: string | null;
   onSelectRover: (id: string | null) => void;
 }
@@ -43,10 +42,10 @@ export default function MapSidebar({
                 <div className="flex items-center gap-2">
                   <span className={cn(
                     "h-1.5 w-1.5 rounded-full",
-                    r.status === "ERROR" || r.status === "OFFLINE" ? "bg-rose-500 animate-pulse" :
+                    r.status.toLowerCase() === "error" || r.status.toLowerCase() === "offline" ? "bg-rose-500 animate-pulse" :
                     r.battery < 40 ? "bg-amber-500" : "bg-emerald-400"
                   )}></span>
-                  <span>{r.name.toUpperCase()}</span>
+                  <span>{r.id.toUpperCase()}</span>
                 </div>
                 <span className="text-[8px] text-slate-500 font-normal uppercase">({r.status})</span>
               </button>

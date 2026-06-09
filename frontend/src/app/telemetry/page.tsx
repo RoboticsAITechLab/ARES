@@ -6,12 +6,47 @@ import { useMissionStore } from "@/store/mission-store";
 import TelemetryCard from "@/components/TelemetryCard";
 
 export default function TelemetryPage() {
-  const { rovers, events, isEmergencyStop, telemetryHistory } = useMissionStore();
-  const [selectedRoverId, setSelectedRoverId] = useState<string>(rovers[0]?.id || "mother-rover");
+  const { fleet, events, isEmergencyStop, telemetry } = useMissionStore();
+
+  // Combine mother and scouts into a single list
+  const roversList = [];
+  if (fleet.mother) {
+    roversList.push(fleet.mother);
+  }
+  roversList.push(...fleet.scouts);
+
+  const [selectedRoverId, setSelectedRoverId] = useState<string>(
+    roversList[0]?.id || "mother-rover"
+  );
   const [logFilter, setLogFilter] = useState<"all" | "nominal" | "warning" | "critical">("all");
 
-  const rover = rovers.find((r) => r.id === selectedRoverId) || rovers[0];
-  const historyData = telemetryHistory[selectedRoverId] || [];
+  const rover = roversList.find((r) => r.id === selectedRoverId) || roversList[0];
+  const historyData = telemetry[selectedRoverId] || [];
+
+  if (roversList.length === 0 || !rover) {
+    return (
+      <div className="space-y-6 font-mono animate-fade-in text-slate-100">
+        {/* Page Header */}
+        <div className="p-4 rounded border border-slate-800 bg-[#111827] flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg select-none">
+          <div className="flex items-center gap-3">
+            <Activity className="h-5 w-5 text-cyan-400 animate-status-pulse" />
+            <div>
+              <div className="text-[10px] text-slate-500 tracking-wider font-bold">VEHICLE LOGISTICS CORE</div>
+              <h1 className="text-sm font-black text-white tracking-widest uppercase">
+                TELEMETRY_DIAGNOSTICS // SYSTEMS_CHECK
+              </h1>
+            </div>
+          </div>
+        </div>
+
+        <div className="h-[400px] flex flex-col items-center justify-center border border-dashed border-slate-850 rounded bg-[#111827]/30 text-slate-500 gap-3">
+          <Activity className="h-10 w-10 text-slate-650 animate-pulse" />
+          <span className="font-extrabold text-sm tracking-widest text-slate-450 uppercase">NO VEHICLES DETECTED IN FLEET</span>
+          <span className="text-[10px] text-slate-600">Establish Mother Rover DSN link or deploy Scout units to initiate telemetry diagnostics.</span>
+        </div>
+      </div>
+    );
+  }
 
   const filteredLogs = events.filter((log) => {
     if (logFilter === "all") return true;
@@ -131,8 +166,8 @@ export default function TelemetryPage() {
             onChange={(e) => setSelectedRoverId(e.target.value)}
             className="bg-slate-950 border border-slate-800 text-slate-350 p-2 rounded focus:outline-none focus:border-cyan-500/40 font-bold text-[10px] cursor-pointer"
           >
-            {rovers.map(r => (
-              <option key={r.id} value={r.id}>{r.name.toUpperCase()}</option>
+            {roversList.map(r => (
+              <option key={r.id} value={r.id}>{r.id.toUpperCase()}</option>
             ))}
           </select>
         </div>
@@ -148,7 +183,7 @@ export default function TelemetryPage() {
           <div className="p-5 rounded border border-slate-800 bg-[#111827] space-y-4 shadow-md">
             <div className="flex justify-between items-center border-b border-slate-800 pb-3 select-none">
               <h2 className="text-sm font-black text-white tracking-wider uppercase">
-                {rover.name} // CORE_HEALTH
+                {rover.id.toUpperCase()} // CORE_HEALTH
               </h2>
               <span className={`text-[8px] px-2 py-0.5 rounded border uppercase tracking-widest font-extrabold ${
                 isEmergencyStop 

@@ -7,11 +7,18 @@ import MissionClock from "../MissionClock";
 import { Button } from "../ui/button";
 
 export default function Topbar() {
-  const { isSidebarOpen, toggleSidebar, rovers, isEmergencyStop } = useMissionStore();
+  const { isSidebarOpen, toggleSidebar, fleet, isEmergencyStop } = useMissionStore();
 
-  const onlineRovers = rovers.filter((r) => r.status !== "OFFLINE" && r.status !== "ERROR").length;
-  const criticalRoversCount = rovers.filter((r) => r.status === "ERROR").length;
-  const warningRoversCount = rovers.filter((r) => r.status === "OFFLINE").length;
+  const mother = fleet.mother;
+  const scouts = fleet.scouts;
+  const totalRoversCount = (mother ? 1 : 0) + scouts.length;
+
+  const onlineMother = mother && mother.status === "online" ? 1 : 0;
+  const onlineScouts = scouts.filter((s) => s.status.toLowerCase() === "online" || s.status.toLowerCase() === "active").length;
+  const onlineRovers = onlineMother + onlineScouts;
+
+  const criticalRoversCount = (mother && mother.status === "offline" ? 1 : 0) + scouts.filter((s) => s.status.toLowerCase() === "error" || s.status.toLowerCase() === "offline").length;
+  const warningRoversCount = scouts.filter((s) => s.status.toLowerCase() === "warning" || s.status.toLowerCase() === "degraded").length;
 
   return (
     <header className="h-16 border-b border-slate-800 bg-[#111827] flex items-center justify-between px-4 sm:px-6 shrink-0 select-none z-30 font-mono relative">
@@ -49,7 +56,7 @@ export default function Topbar() {
           <Heart className="h-3 w-3 text-rose-500" />
           <span>FLEET:</span>
           <span className="text-slate-200 font-bold">
-            {isEmergencyStop ? "60%" : "91%"}
+            {mother ? `${mother.battery}%` : "OFFLINE"}
           </span>
         </div>
 
@@ -58,7 +65,7 @@ export default function Topbar() {
           <Wifi className="h-3 w-3 text-cyan-400" />
           <span>COMMS:</span>
           <span className="text-emerald-400 font-bold uppercase">
-            {isEmergencyStop ? "DEGRADED" : "NOMINAL"}
+            {mother ? (mother.signal > 75 ? "NOMINAL" : "DEGRADED") : "OFFLINE"}
           </span>
         </div>
 
@@ -67,7 +74,7 @@ export default function Topbar() {
           <ShieldCheck className="h-3 w-3 text-emerald-400" />
           <span>VEHICLES:</span>
           <span className="text-slate-200 font-bold">
-            {onlineRovers}/{rovers.length}
+            {onlineRovers}/{totalRoversCount}
           </span>
         </div>
 

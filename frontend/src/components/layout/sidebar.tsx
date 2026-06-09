@@ -36,7 +36,7 @@ const iconMap = {
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { isSidebarOpen, setSidebarOpen, rovers, events, systemHealth, theme, layoutDensity } = useMissionStore();
+  const { isSidebarOpen, setSidebarOpen, fleet, events, systemHealth, theme, layoutDensity } = useMissionStore();
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -53,7 +53,7 @@ export default function Sidebar() {
     { name: "Telemetry", path: "/telemetry", icon: "Activity" }
   ];
 
-  const motherRover = rovers.find((r) => r.type === "mother")!;
+  const motherRover = fleet.mother;
   const activeAlertsCount = events.filter(a => a.severity === "CRITICAL" || a.severity === "WARNING").length;
 
   const getContextMetadata = () => {
@@ -108,12 +108,14 @@ export default function Sidebar() {
             </div>
             <div className="flex justify-between pt-1 border-t border-slate-900/60">
               <span className="text-slate-500 font-semibold uppercase">FLEET HEALTH:</span>
-              <span className="text-emerald-400 font-extrabold">{motherRover.health}%</span>
+              <span className={motherRover ? "text-emerald-400 font-extrabold" : "text-rose-500 font-bold"}>
+                {motherRover ? `${motherRover.battery}%` : "OFFLINE"}
+              </span>
             </div>
             <div className="h-1 w-full bg-slate-900 rounded-full overflow-hidden">
               <div 
-                className="h-full bg-emerald-500" 
-                style={{ width: `${motherRover.health}%` }}
+                className="h-full bg-emerald-500 animate-pulse" 
+                style={{ width: motherRover ? `${motherRover.battery}%` : "0%" }}
               ></div>
             </div>
           </>

@@ -12,13 +12,13 @@ import QuickActions from "@/components/QuickActions";
 import SystemHealth from "@/components/SystemHealth";
 
 export default function MissionControlPage() {
-  const { rovers, events, isEmergencyStop, missions } = useMissionStore();
+  const { fleet, events, isEmergencyStop, missionControl } = useMissionStore();
 
-  const motherRover = rovers.find((r) => r.type === "mother")!;
-  const scoutRovers = rovers.filter((r) => r.type === "scout");
+  const motherRover = fleet.mother;
+  const scoutRovers = fleet.scouts;
   const activeAlertsCount = events.filter(a => a.severity === "CRITICAL" || a.severity === "WARNING").length;
 
-  const currentMission = missions.find((m) => m.status === "ACTIVE") || missions[0];
+  const currentMission = missionControl.currentMission;
 
   return (
     <div className="space-y-6 select-none animate-fade-in">

@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 export default function QuickActions() {
   const { 
     isEmergencyStop, 
-    triggerEmergencyStop, 
+    setEmergencyStop, 
     addLog 
   } = useMissionStore();
 
@@ -83,7 +83,15 @@ export default function QuickActions() {
           {/* Emergency Abort */}
           <Button
             variant="outline"
-            onClick={() => triggerEmergencyStop()}
+            onClick={() => {
+              const nextState = !isEmergencyStop;
+              setEmergencyStop(nextState);
+              if (nextState) {
+                addLog("Ground Ops", "SYSTEM", "CRITICAL", "EMERGENCY VEHICLE STOP SEQUENCE INITIATED.");
+              } else {
+                addLog("Ground Ops", "SYSTEM", "INFO", "Emergency safe mode released. Re-establishing telemetry streams.");
+              }
+            }}
             className={cn(
               "text-[10px] h-9 flex items-center justify-center gap-1.5 cursor-pointer uppercase font-mono tracking-wider font-bold transition-all duration-200 border",
               isEmergencyStop

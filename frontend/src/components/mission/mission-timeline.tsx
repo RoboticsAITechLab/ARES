@@ -4,8 +4,8 @@ import { Check, Compass } from "lucide-react";
 import { useMissionStore } from "@/store/mission-store";
 
 export default function MissionTimeline() {
-  const { missions } = useMissionStore();
-  const currentMission = missions.find(m => m.status === "ACTIVE") || missions[0];
+  const { missionControl } = useMissionStore();
+  const currentMission = missionControl.currentMission;
 
   if (!currentMission) {
     return (

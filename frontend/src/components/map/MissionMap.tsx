@@ -26,7 +26,39 @@ export default function MissionMap({ selectedRoverId }: MissionMapProps) {
   const mapWidth = 600;
   const mapHeight = 350;
 
-  const { rovers, routes, missions } = useMissionStore();
+  const { fleet, map } = useMissionStore();
+  const routes = map.routes;
+
+  const gridToLatLon = (x: number, y: number) => {
+    const minLat = 18.60;
+    const maxLat = 18.70;
+    const minLon = 226.10;
+    const maxLon = 226.30;
+    return {
+      latitude: minLat + (y / 100) * (maxLat - minLat),
+      longitude: minLon + (x / 100) * (maxLon - minLon)
+    };
+  };
+
+  const virtualRovers: any[] = [];
+  if (fleet.mother) {
+    const { latitude, longitude } = gridToLatLon(fleet.mother.x, fleet.mother.y);
+    virtualRovers.push({
+      ...fleet.mother,
+      latitude,
+      longitude,
+      type: "mother" as const
+    });
+  }
+  fleet.scouts.forEach(s => {
+    const { latitude, longitude } = gridToLatLon(s.x, s.y);
+    virtualRovers.push({
+      ...s,
+      latitude,
+      longitude,
+      type: "scout" as const
+    });
+  });
 
   // Project lat/lon to local SVG viewBox coords (600x350)
   const projectCoords = (lat: number, lon: number) => {
@@ -61,10 +93,12 @@ export default function MissionMap({ selectedRoverId }: MissionMapProps) {
   }, []);
 
   // Filter rovers to highlight selected one if applicable
-  const motherRover = rovers.find(r => r.type === "mother")!;
-  const scoutRovers = rovers.filter(r => r.type === "scout");
+  const motherRover = virtualRovers.find(r => r.type === "mother");
+  const scoutRovers = virtualRovers.filter(r => r.type === "scout");
 
-  const motherXY = projectCoords(motherRover.latitude, motherRover.longitude);
+  const motherXY = motherRover 
+    ? projectCoords(motherRover.latitude, motherRover.longitude)
+    : { x: 300, y: 175 };
 
   return (
     <div 
@@ -119,9 +153,9 @@ export default function MissionMap({ selectedRoverId }: MissionMapProps) {
           })}
 
           {/* 4. Active Transmission Radar Pulses */}
-          <RadarPulse cx={motherXY.x} cy={motherXY.y} colorClass="stroke-cyan-500" />
+          {motherRover && <RadarPulse cx={motherXY.x} cy={motherXY.y} colorClass="stroke-cyan-500" />}
           {scoutRovers
-            .filter(s => s.status === "EXPLORING" || s.status === "DEPLOYED")
+            .filter(s => s.status.toLowerCase() === "exploring" || s.status.toLowerCase() === "deployed" || s.status.toLowerCase() === "active")
             .map(s => {
               const xy = projectCoords(s.latitude, s.longitude);
               return <RadarPulse key={s.id} cx={xy.x} cy={xy.y} colorClass="stroke-emerald-500" />;
@@ -129,8 +163,8 @@ export default function MissionMap({ selectedRoverId }: MissionMapProps) {
           }
 
           {/* 5. Rover Vehicle Markers */}
-          {rovers
-            .filter(r => r.status !== "OFFLINE")
+          {virtualRovers
+            .filter(r => r.status.toLowerCase() !== "offline")
             .map(rover => {
               const xy = projectCoords(rover.latitude, rover.longitude);
               const isTargeted = selectedRoverId === rover.id;
@@ -140,7 +174,7 @@ export default function MissionMap({ selectedRoverId }: MissionMapProps) {
                   <MapMarker 
                     x={xy.x}
                     y={xy.y}
-                    name={rover.name}
+                    name={rover.id.toUpperCase()}
                     type={rover.type}
                     status={rover.status}
                     battery={rover.battery}

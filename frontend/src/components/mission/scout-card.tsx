@@ -1,24 +1,26 @@
 "use client";
 
-import { Battery, Wifi, MapPin, Gauge, Thermometer, Cpu, Heart } from "lucide-react";
-import { Rover } from "@/lib/types";
+import { Battery, Wifi, MapPin } from "lucide-react";
+import { ScoutRover } from "@/types/ScoutRover";
 import { STATUS_STYLES } from "@/lib/constants";
 import { Badge } from "@/components/ui/badge";
 
 interface ScoutCardProps {
-  rover: Rover;
+  rover: ScoutRover;
 }
 
 export default function ScoutCard({ rover }: ScoutCardProps) {
-  const style = STATUS_STYLES[rover.status as keyof typeof STATUS_STYLES] || STATUS_STYLES.online;
+  // Normalize status mapping to style
+  const normStatus = (rover.status || "").toLowerCase();
+  const style = STATUS_STYLES[normStatus as keyof typeof STATUS_STYLES] || STATUS_STYLES.online;
 
   return (
-    <div className="rounded border border-slate-800 bg-[#111827] hover:border-slate-700/80 transition duration-150 relative font-mono">
+    <div className="rounded border border-slate-800 bg-[#111827] hover:border-slate-700/80 transition duration-150 relative font-mono select-none">
       {/* Header */}
       <div className="border-b border-slate-800 bg-slate-900/60 px-4 py-2.5 flex justify-between items-center">
         <div className="flex items-center gap-1.5">
           <span className="text-slate-500 text-[9px] tracking-wider font-bold">RECON UNIT //</span>
-          <h4 className="text-xs font-bold text-white tracking-widest uppercase">{rover.name}</h4>
+          <h4 className="text-xs font-bold text-white tracking-widest uppercase">{rover.id.toUpperCase()}</h4>
         </div>
         <Badge variant="outline" className={`text-[8px] py-0 px-2 rounded-full tracking-wider font-semibold border ${style.badge}`}>
           {style.label}
@@ -69,27 +71,27 @@ export default function ScoutCard({ rover }: ScoutCardProps) {
             <span className="font-bold text-slate-200">{rover.temperature}°C</span>
           </div>
           <div className="flex justify-between bg-slate-950/20 px-2 py-1 rounded border border-slate-900">
-            <span>CPU:</span>
-            <span className="font-bold text-slate-200">{rover.cpu}%</span>
+            <span>SPEED:</span>
+            <span className="font-bold text-slate-200">{rover.speed.toFixed(1)} m/s</span>
           </div>
           <div className="flex justify-between bg-slate-950/20 px-2 py-1 rounded border border-slate-900">
-            <span>MEM:</span>
-            <span className="font-bold text-slate-200">{rover.memory}%</span>
+            <span>GRID X:</span>
+            <span className="font-bold text-slate-200">{rover.x}</span>
           </div>
           <div className="flex justify-between bg-slate-950/20 px-2 py-1 rounded border border-slate-900">
-            <span>HEALTH:</span>
-            <span className="font-bold text-slate-200">{rover.health}%</span>
+            <span>GRID Y:</span>
+            <span className="font-bold text-slate-200">{rover.y}</span>
           </div>
         </div>
 
-        {/* Location & Speed */}
+        {/* Location & Heading */}
         <div className="bg-slate-950/40 p-2 rounded border border-slate-800/80 text-[8px] text-slate-500 space-y-1">
           <div className="flex justify-between items-center">
             <span className="flex items-center gap-1">
               <MapPin className="h-3 w-3 text-slate-600" />
-              LA {rover.latitude.toFixed(4)} / LO {rover.longitude.toFixed(4)}
+              HEADING VANTAGE
             </span>
-            <span>{rover.speed.toFixed(1)} m/s</span>
+            <span>{rover.heading}°</span>
           </div>
         </div>
       </div>
