@@ -2,23 +2,26 @@
 
 import { useState } from "react";
 import { Activity, Battery, Wifi, Thermometer, Cpu, ShieldAlert, FileText } from "lucide-react";
-import { useMissionStore } from "@/lib/store";
+import { useMissionStore } from "@/store/mission-store";
 import TelemetryCard from "@/components/TelemetryCard";
 
 export default function TelemetryPage() {
   const [logFilter, setLogFilter] = useState<"all" | "nominal" | "warning" | "critical">("all");
-  const { rovers, logs, isEmergencyStop } = useMissionStore();
+  const { rovers, events, isEmergencyStop } = useMissionStore();
 
-  const filteredLogs = logs.filter((log) => {
+  const filteredLogs = events.filter((log) => {
     if (logFilter === "all") return true;
-    return log.level === logFilter;
+    if (logFilter === "nominal") return log.severity === "INFO";
+    if (logFilter === "warning") return log.severity === "WARNING";
+    if (logFilter === "critical") return log.severity === "CRITICAL";
+    return true;
   });
 
-  const getLogLevelClass = (level: string) => {
-    switch (level) {
-      case "critical":
+  const getLogLevelClass = (severity: string) => {
+    switch (severity) {
+      case "CRITICAL":
         return "text-rose-500 font-bold";
-      case "warning":
+      case "WARNING":
         return "text-amber-500 font-bold";
       default:
         return "text-emerald-400 font-semibold";
@@ -150,10 +153,10 @@ export default function TelemetryPage() {
                   <div className="flex justify-between items-center border-b border-slate-800/80 pb-2 select-none">
                     <h4 className="text-xs font-black text-white tracking-widest uppercase">{scout.name}</h4>
                     <span className={`text-[8px] px-1.5 py-0.2 rounded border font-extrabold uppercase ${
-                      scout.status === "warning" 
-                        ? "border-amber-500/20 text-amber-400" 
-                        : scout.status === "critical"
-                        ? "border-rose-500/30 text-rose-500 animate-pulse"
+                      scout.status === "ERROR" || scout.status === "OFFLINE"
+                        ? "border-rose-500/30 text-rose-500 animate-pulse" 
+                        : scout.status === "EXPLORING" || scout.status === "RETURNING"
+                        ? "border-amber-500/20 text-amber-400"
                         : "border-slate-800 text-slate-400"
                     }`}>
                       {scout.status}
@@ -242,10 +245,10 @@ export default function TelemetryPage() {
                 filteredLogs.map((log, index) => (
                   <div key={index} className="flex gap-3 text-slate-400 hover:bg-slate-900/30 py-0.5 transition rounded px-1.5">
                     <span className="text-slate-600 select-none tabular-nums shrink-0">{log.timestamp}</span>
-                    <span className={`font-bold select-none shrink-0 w-8 truncate uppercase ${getLogLevelClass(log.level)}`}>
+                    <span className={`font-bold select-none shrink-0 w-8 truncate uppercase ${getLogLevelClass(log.severity)}`}>
                       [{log.category}]
                     </span>
-                    <span className="text-slate-300 break-all">{log.message}</span>
+                    <span className="text-slate-300 break-all">{log.description}</span>
                   </div>
                 ))
               ) : (

@@ -1,34 +1,70 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Map, Activity, ShieldAlert, Wifi, Layers, ChevronRight } from "lucide-react";
+import { 
+  LayoutDashboard, 
+  Calendar, 
+  Cpu, 
+  Map, 
+  Activity, 
+  List, 
+  Radio, 
+  Settings, 
+  Sliders, 
+  Layers, 
+  ChevronRight, 
+  Wifi, 
+  ShieldAlert 
+} from "lucide-react";
 import { MISSION_INFO } from "@/lib/constants";
 import { cn } from "@/lib/utils";
-import { useMissionStore } from "@/lib/store";
+import { useMissionStore } from "@/store/mission-store";
 
 const iconMap = {
-  LayoutDashboard: LayoutDashboard,
-  Map: Map,
-  Activity: Activity,
+  LayoutDashboard,
+  Calendar,
+  Cpu,
+  Map,
+  Activity,
+  List,
+  Radio,
+  Settings,
+  Sliders
 };
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { isSidebarOpen, setSidebarOpen, toggleSidebar, rovers, systemHealth, alerts } = useMissionStore();
+  const { isSidebarOpen, setSidebarOpen, rovers, events, systemHealth, theme, layoutDensity } = useMissionStore();
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const root = window.document.documentElement;
+      root.classList.remove("theme-dark", "theme-mars", "theme-matrix", "density-comfortable", "density-compact");
+      root.classList.add(`theme-${theme}`);
+      root.classList.add(`density-${layoutDensity}`);
+    }
+  }, [theme, layoutDensity]);
+  
   const links = [
     { name: "Mission Control", path: "/mission-control", icon: "LayoutDashboard" },
-    { name: "Live Map", path: "/live-map", icon: "Map" },
+    { name: "Mission Planner", path: "/planner", icon: "Calendar" },
+    { name: "Rovers", path: "/rovers", icon: "Cpu" },
+    { name: "Live Map", path: "/map", icon: "Map" },
     { name: "Telemetry", path: "/telemetry", icon: "Activity" },
+    { name: "Events Center", path: "/events", icon: "List" },
+    { name: "Scouts Ops", path: "/scouts", icon: "Radio" },
+    { name: "Operations", path: "/operations", icon: "Settings" },
+    { name: "Settings", path: "/settings", icon: "Sliders" }
   ];
 
   const motherRover = rovers.find((r) => r.type === "mother")!;
-  const activeAlertsCount = alerts.filter(a => a.severity === "critical" || a.severity === "warning").length;
+  const activeAlertsCount = events.filter(a => a.severity === "CRITICAL" || a.severity === "WARNING").length;
 
   const getContextMetadata = () => {
     switch (pathname) {
-      case "/live-map":
+      case "/map":
         return (
           <>
             <div className="flex justify-between">
@@ -37,10 +73,10 @@ export default function Sidebar() {
             </div>
             <div className="flex justify-between">
               <span className="text-slate-500 font-semibold uppercase">COVERAGE AREA:</span>
-              <span className="text-cyan-400 font-extrabold">34.2%</span>
+              <span className="text-cyan-400 font-extrabold">34.20%</span>
             </div>
             <div className="flex justify-between border-t border-slate-900/60 pt-2 mt-1">
-              <span className="text-slate-500 font-semibold uppercase">HAZARDS DETECTED:</span>
+              <span className="text-slate-500 font-semibold uppercase">HAZARDS SECTOR:</span>
               <span className="text-rose-500 font-extrabold animate-pulse">6 ACTIVE</span>
             </div>
           </>
@@ -128,13 +164,13 @@ export default function Sidebar() {
         </div>
 
         {/* Navigation Links - SPA Mode */}
-        <nav className="flex-1 px-4 py-6 space-y-1 font-mono">
+        <nav className="flex-1 px-4 py-4 space-y-0.5 font-mono overflow-y-auto">
           <div className="px-3 pb-2 text-[9px] text-slate-500 tracking-widest uppercase font-bold">
             OPERATIONAL INTERFACES
           </div>
           {links.map((link) => {
             const IconComponent = iconMap[link.icon as keyof typeof iconMap];
-            const isActive = pathname === link.path;
+            const isActive = pathname === link.path || pathname?.startsWith(link.path + "/");
 
             return (
               <Link
@@ -142,17 +178,17 @@ export default function Sidebar() {
                 href={link.path}
                 onClick={() => setSidebarOpen(false)}
                 className={cn(
-                  "flex items-center justify-between px-3 py-2.5 rounded border text-xs transition-all duration-150 group cursor-pointer",
+                  "flex items-center justify-between px-3 py-2 rounded border text-xs transition-all duration-150 group cursor-pointer",
                   isActive
                     ? "bg-[#111827] text-cyan-400 border-cyan-500/40 font-extrabold shadow-[0_0_15px_rgba(6,182,212,0.04)]"
                     : "text-slate-400 border-transparent hover:text-slate-200 hover:bg-slate-900/30 hover:border-slate-800"
                 )}
               >
                 <div className="flex items-center gap-3">
-                  {IconComponent && <IconComponent className={cn("h-4.5 w-4.5", isActive ? "text-cyan-400" : "text-slate-400")} />}
-                  <span className="tracking-wider">{link.name.toUpperCase()}</span>
+                  {IconComponent && <IconComponent className={cn("h-4 w-4", isActive ? "text-cyan-400" : "text-slate-400")} />}
+                  <span className="tracking-wider text-[11px]">{link.name.toUpperCase()}</span>
                 </div>
-                <ChevronRight className={cn("h-3.5 w-3.5 transition-transform duration-150 text-slate-500 group-hover:text-cyan-400", isActive && "text-cyan-400 translate-x-0.5")} />
+                <ChevronRight className={cn("h-3 w-3 transition-transform duration-150 text-slate-500 group-hover:text-cyan-400", isActive && "text-cyan-400 translate-x-0.5")} />
               </Link>
             );
           })}

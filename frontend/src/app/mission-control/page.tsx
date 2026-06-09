@@ -1,7 +1,8 @@
 "use client";
 
-import { Compass } from "lucide-react";
-import { useMissionStore } from "@/lib/store";
+import { Compass, PlaySquare } from "lucide-react";
+import Link from "next/link";
+import { useMissionStore } from "@/store/mission-store";
 import { MISSION_INFO } from "@/lib/constants";
 import MotherRoverCard from "@/components/mission/mother-rover-card";
 import ScoutCard from "@/components/mission/scout-card";
@@ -11,33 +12,35 @@ import QuickActions from "@/components/QuickActions";
 import SystemHealth from "@/components/SystemHealth";
 
 export default function MissionControlPage() {
-  const { rovers, alerts, isEmergencyStop } = useMissionStore();
+  const { rovers, events, isEmergencyStop, missions } = useMissionStore();
 
   const motherRover = rovers.find((r) => r.type === "mother")!;
   const scoutRovers = rovers.filter((r) => r.type === "scout");
-  const activeAlertsCount = alerts.filter(a => a.severity === "critical" || a.severity === "warning").length;
+  const activeAlertsCount = events.filter(a => a.severity === "CRITICAL" || a.severity === "WARNING").length;
+
+  const currentMission = missions.find((m) => m.status === "ACTIVE") || missions[0];
 
   return (
     <div className="space-y-6 select-none animate-fade-in">
       {/* 1. Mission Status Banner */}
-      <div className="p-4 rounded border border-slate-800 bg-[#111827] font-mono flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-lg">
+      <div className="p-4 rounded border border-slate-800 bg-[#111827] font-mono flex flex-col xl:flex-row xl:items-center justify-between gap-4 shadow-lg">
         {/* Left Section: Target Info */}
         <div className="flex items-center gap-3">
           <Compass className="h-6 w-6 text-cyan-400 shrink-0 animate-status-pulse" />
           <div>
-            <div className="text-[9px] text-slate-500 tracking-wider uppercase font-bold">MISSION TARGET LOCATION</div>
-            <h1 className="text-sm font-black text-white tracking-widest uppercase">
-              {MISSION_INFO.name} <span className="text-slate-700">//</span> {MISSION_INFO.target.toUpperCase()}
+            <div className="text-[9px] text-slate-500 tracking-wider uppercase font-bold">CURRENT ACTIVE MISSION VECTOR</div>
+            <h1 className="text-sm font-black text-white tracking-widest uppercase truncate max-w-[250px] sm:max-w-none">
+              {currentMission ? currentMission.name : MISSION_INFO.name} <span className="text-slate-700">//</span> {currentMission ? currentMission.status : "INACTIVE"}
             </h1>
           </div>
         </div>
 
         {/* Dynamic Telemetry Metrics Panel */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:flex lg:items-center gap-3 text-[10px]">
+        <div className="grid grid-cols-2 sm:grid-cols-4 xl:flex xl:items-center gap-3 text-[10px] flex-1 justify-end">
           {/* Phase */}
           <div className="bg-slate-950 border border-slate-800/80 px-3 py-1.5 rounded flex flex-col min-w-[100px]">
-            <span className="text-[7px] text-slate-500 uppercase leading-none font-bold">CURRENT PHASE</span>
-            <span className="font-extrabold text-cyan-400 mt-1">{MISSION_INFO.phase}</span>
+            <span className="text-[7px] text-slate-500 uppercase leading-none font-bold">PRIORITY</span>
+            <span className="font-extrabold text-cyan-400 mt-1">{currentMission ? currentMission.priority : "MEDIUM"}</span>
           </div>
 
           {/* Area Explored */}
@@ -48,8 +51,10 @@ export default function MissionControlPage() {
 
           {/* Samples Collected */}
           <div className="bg-slate-950 border border-slate-800/80 px-3 py-1.5 rounded flex flex-col min-w-[100px]">
-            <span className="text-[7px] text-slate-500 uppercase leading-none font-bold">SAMPLES COLLECTED</span>
-            <span className="font-extrabold text-slate-200 mt-1">18 / 50</span>
+            <span className="text-[7px] text-slate-500 uppercase leading-none font-bold">OBJECTIVES</span>
+            <span className="font-extrabold text-slate-200 mt-1">
+              {currentMission ? currentMission.objectives.filter(o => o.status === "COMPLETED").length : 0} / {currentMission ? currentMission.objectives.length : 0}
+            </span>
           </div>
 
           {/* Hazards Detected */}
@@ -58,6 +63,15 @@ export default function MissionControlPage() {
             <span className="font-extrabold text-rose-400 mt-1 animate-pulse">6 ACTIVE</span>
           </div>
         </div>
+
+        {/* Action Link to enter execution room */}
+        <Link
+          href="/mission-control/execution"
+          className="flex items-center justify-center gap-1.5 px-4 py-2 border border-cyan-500 bg-cyan-500/10 text-cyan-400 rounded text-[10px] font-extrabold uppercase hover:bg-cyan-500/20 transition cursor-pointer shadow-[0_0_15px_rgba(6,182,212,0.1)] shrink-0 self-start xl:self-auto"
+        >
+          <PlaySquare className="h-3.5 w-3.5" />
+          ENTER EXECUTION CENTER
+        </Link>
       </div>
 
       {/* Grid: Stacks to 1 column on mobile, 2 columns on lg, 3 columns on xl */}

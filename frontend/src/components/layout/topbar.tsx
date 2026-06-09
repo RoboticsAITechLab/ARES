@@ -2,16 +2,16 @@
 
 import { Radio, ShieldCheck, Wifi, ShieldAlert, Heart, Menu, X } from "lucide-react";
 import { MISSION_INFO } from "@/lib/constants";
-import { useMissionStore } from "@/lib/store";
+import { useMissionStore } from "@/store/mission-store";
 import MissionClock from "../MissionClock";
 import { Button } from "../ui/button";
 
 export default function Topbar() {
-  const { isSidebarOpen, toggleSidebar, rovers, alerts, isEmergencyStop } = useMissionStore();
+  const { isSidebarOpen, toggleSidebar, rovers, isEmergencyStop } = useMissionStore();
 
-  const onlineRovers = rovers.filter((r) => r.status === "online" || r.status === "warning").length;
-  const criticalRoversCount = rovers.filter((r) => r.status === "critical").length;
-  const warningRoversCount = rovers.filter((r) => r.status === "warning").length;
+  const onlineRovers = rovers.filter((r) => r.status !== "OFFLINE" && r.status !== "ERROR").length;
+  const criticalRoversCount = rovers.filter((r) => r.status === "ERROR").length;
+  const warningRoversCount = rovers.filter((r) => r.status === "OFFLINE").length;
 
   return (
     <header className="h-16 border-b border-slate-800 bg-[#111827] flex items-center justify-between px-4 sm:px-6 shrink-0 select-none z-30 font-mono relative">

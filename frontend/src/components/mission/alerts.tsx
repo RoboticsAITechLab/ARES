@@ -1,19 +1,23 @@
 "use client";
 
 import { useState } from "react";
-import { AlertCircle, AlertTriangle, CheckCircle, Bell, ShieldAlert } from "lucide-react";
-import { mockAlerts } from "@/lib/mock-data";
+import { AlertCircle, AlertTriangle, CheckCircle, Bell } from "lucide-react";
+import { useMissionStore } from "@/store/mission-store";
 
 export default function Alerts() {
   const [filter, setFilter] = useState<"all" | "critical" | "warning" | "nominal">("all");
+  const { events } = useMissionStore();
 
-  const filteredAlerts = mockAlerts.filter((alert) => {
+  const filteredAlerts = events.filter((event) => {
     if (filter === "all") return true;
-    return alert.severity === filter;
+    if (filter === "critical") return event.severity === "CRITICAL";
+    if (filter === "warning") return event.severity === "WARNING";
+    if (filter === "nominal") return event.severity === "INFO";
+    return true;
   });
 
   const getSeverityIcon = (severity: string) => {
-    switch (severity) {
+    switch (severity.toLowerCase()) {
       case "critical":
         return <AlertCircle className="h-4 w-4 text-rose-500 shrink-0 mt-0.5" />;
       case "warning":
@@ -24,7 +28,7 @@ export default function Alerts() {
   };
 
   const getSeverityClass = (severity: string) => {
-    switch (severity) {
+    switch (severity.toLowerCase()) {
       case "critical":
         return "border-rose-500/25 bg-rose-500/5 text-rose-200";
       case "warning":
@@ -77,15 +81,15 @@ export default function Alerts() {
               {getSeverityIcon(alert.severity)}
               <div className="space-y-1">
                 <div className="flex items-center gap-1.5 text-[8px] text-slate-500 font-bold uppercase tracking-wider">
-                  <span>{alert.roverName}</span>
+                  <span>{alert.source}</span>
                   <span>•</span>
                   <span>{alert.timestamp}</span>
                   <span>•</span>
-                  <span className={alert.severity === "critical" ? "text-rose-500" : alert.severity === "warning" ? "text-amber-500" : "text-emerald-500"}>
-                    {alert.severity.toUpperCase()}
+                  <span className={alert.severity === "CRITICAL" ? "text-rose-500" : alert.severity === "WARNING" ? "text-amber-500" : "text-emerald-500"}>
+                    {alert.severity}
                   </span>
                 </div>
-                <p className="text-[10px] text-slate-300 leading-normal">{alert.message}</p>
+                <p className="text-[10px] text-slate-300 leading-normal">{alert.description}</p>
               </div>
             </div>
           ))

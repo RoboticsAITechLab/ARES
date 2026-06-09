@@ -1,23 +1,41 @@
 "use client";
 
-import { useMissionStore } from "@/lib/store";
+import { useState } from "react";
+import { useMissionStore } from "@/store/mission-store";
 import { Button } from "./ui/button";
-import { RefreshCw, RotateCw, Map, ShieldAlert, Cloud } from "lucide-react";
+import { RefreshCw, RotateCw, Map, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function QuickActions() {
   const { 
-    isRefreshing, 
-    isSyncing, 
     isEmergencyStop, 
-    refreshTelemetry, 
-    syncData, 
     triggerEmergencyStop, 
     addLog 
   } = useMissionStore();
 
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const refreshTelemetry = () => {
+    setIsRefreshing(true);
+    addLog("Ground Command", "SYSTEM", "INFO", "Manual DSN packet query sent. Scanning vehicle health feeds...");
+    setTimeout(() => {
+      setIsRefreshing(false);
+      addLog("Ground Command", "SYSTEM", "INFO", "DSN telemetry packet sync complete. Fleet data normalized.");
+    }, 1000);
+  };
+
+  const syncData = () => {
+    setIsSyncing(true);
+    addLog("Ground Command", "COMMS", "INFO", "Broadcasting state synchronization frame to Mars Express Orbiter...");
+    setTimeout(() => {
+      setIsSyncing(false);
+      addLog("Ground Command", "COMMS", "INFO", "State synchronization verified by orbiter. Lag: 21.2 min.");
+    }, 1200);
+  };
+
   const handleCenterMap = () => {
-    addLog("nominal", "NAV", "Manual override: Map viewport aligned on Mother Rover coordinates.");
+    addLog("Ground Command", "COMMS", "INFO", "Manual override: Map viewport aligned on Mother Rover coordinates.");
   };
 
   return (
@@ -34,7 +52,7 @@ export default function QuickActions() {
           <Button
             variant="outline"
             disabled={isRefreshing}
-            onClick={() => refreshTelemetry()}
+            onClick={refreshTelemetry}
             className="text-[10px] h-9 border-slate-800 bg-slate-900/60 text-slate-300 hover:text-cyan-400 hover:border-cyan-500/30 hover:bg-slate-950 flex items-center justify-center gap-1.5 cursor-pointer uppercase font-mono tracking-wider font-semibold disabled:opacity-50"
           >
             <RefreshCw className={cn("h-3 w-3 text-cyan-400", isRefreshing && "animate-spin")} />
@@ -45,7 +63,7 @@ export default function QuickActions() {
           <Button
             variant="outline"
             disabled={isSyncing}
-            onClick={() => syncData()}
+            onClick={syncData}
             className="text-[10px] h-9 border-slate-800 bg-slate-900/60 text-slate-300 hover:text-cyan-400 hover:border-cyan-500/30 hover:bg-slate-950 flex items-center justify-center gap-1.5 cursor-pointer uppercase font-mono tracking-wider font-semibold disabled:opacity-50"
           >
             <RotateCw className={cn("h-3 w-3 text-cyan-400", isSyncing && "animate-spin")} />

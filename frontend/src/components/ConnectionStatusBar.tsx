@@ -1,6 +1,6 @@
 "use client";
 
-import { useMissionStore } from "@/lib/store";
+import { useMissionStore } from "@/store/mission-store";
 import { cn } from "@/lib/utils";
 import { Wifi, AlertCircle, ShieldAlert } from "lucide-react";
 

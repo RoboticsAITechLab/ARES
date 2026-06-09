@@ -1,6 +1,6 @@
 "use client";
 
-import { useMissionStore } from "@/lib/store";
+import { useMissionStore } from "@/store/mission-store";
 import StatusBadge from "./StatusBadge";
 import { Server, Activity, Shield, Cpu, Network, Radio, Wifi } from "lucide-react";
 
