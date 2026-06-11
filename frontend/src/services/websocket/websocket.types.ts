@@ -1,8 +1,3 @@
-/**
- * @file websocketEvents.ts
- * @description Shared type definitions representing the structured messages transmitted over the WebSocket channel.
- */
-
 export type WebSocketMessage =
   | {
       type: "connection";
@@ -12,4 +7,3 @@ export type WebSocketMessage =
       type: "heartbeat";
       timestamp: number;
     };
-

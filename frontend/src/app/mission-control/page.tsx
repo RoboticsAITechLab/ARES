@@ -3,6 +3,8 @@
 import { Compass, PlaySquare } from "lucide-react";
 import Link from "next/link";
 import { useMissionStore } from "@/store/mission-store";
+import { useConnectionStore } from "@/store/connection-store";
+import { cn } from "@/lib/utils";
 import { MISSION_INFO } from "@/lib/constants";
 import MotherRoverCard from "@/components/mission/mother-rover-card";
 import ScoutCard from "@/components/mission/scout-card";
@@ -13,6 +15,7 @@ import SystemHealth from "@/components/SystemHealth";
 
 export default function MissionControlPage() {
   const { fleet, events, isEmergencyStop, missionControl } = useMissionStore();
+  const { connectionStatus } = useConnectionStore();
 
   const motherRover = fleet.mother;
   const scoutRovers = fleet.scouts;
@@ -72,8 +75,12 @@ export default function MissionControlPage() {
           <div>
             <div className="flex justify-between items-center mb-3 font-mono">
               <span className="text-xs font-semibold text-slate-400 tracking-wider uppercase">COMMAND_NODE // PRIMARY</span>
-              <span className="text-[8px] text-cyan-400 font-extrabold uppercase tracking-widest animate-glow">
-                DSN LINK STATUS: ACTIVE
+              <span className={cn(
+                "text-[8px] font-extrabold uppercase tracking-widest animate-glow",
+                connectionStatus === "connected" ? "text-cyan-400" :
+                connectionStatus === "connecting" ? "text-amber-400 animate-pulse" : "text-rose-500"
+              )}>
+                DSN LINK STATUS: {connectionStatus.toUpperCase()}
               </span>
             </div>
             <MotherRoverCard rover={motherRover} />

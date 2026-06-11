@@ -4,6 +4,8 @@ import "./globals.css";
 import Sidebar from "@/components/layout/sidebar";
 import Topbar from "@/components/layout/topbar";
 import ConnectionStatusBar from "@/components/ConnectionStatusBar";
+import { WebSocketProvider } from "@/providers/WebSocketProvider";
+
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,26 +34,29 @@ export default function RootLayout({
       style={{ colorScheme: "dark" }}
     >
       <body className="min-h-full flex text-slate-100 bg-[#050811] overflow-hidden font-sans">
-        <div className="flex h-screen w-screen overflow-hidden">
-          {/* Sidebar Left */}
-          <Sidebar />
+        <WebSocketProvider>
+          <div className="flex h-screen w-screen overflow-hidden">
+            {/* Sidebar Left */}
+            <Sidebar />
 
-          {/* Core App Interface */}
-          <div className="flex flex-col flex-1 h-full min-w-0">
-            {/* Topbar Header */}
-            <Topbar />
+            {/* Core App Interface */}
+            <div className="flex flex-col flex-1 h-full min-w-0">
+              {/* Topbar Header */}
+              <Topbar />
 
-            {/* Connection Status Indicator */}
-            <ConnectionStatusBar />
+              {/* Connection Status Indicator */}
+              <ConnectionStatusBar />
 
-            {/* Viewport content */}
-            <main className="flex-1 overflow-y-auto bg-[#050811] p-4 md:p-6 relative">
-              {children}
-            </main>
+              {/* Viewport content */}
+              <main className="flex-1 overflow-y-auto bg-[#050811] p-4 md:p-6 relative">
+                {children}
+              </main>
+            </div>
           </div>
-        </div>
+        </WebSocketProvider>
       </body>
     </html>
   );
 }
+
 

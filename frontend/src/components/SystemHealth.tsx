@@ -1,11 +1,16 @@
 "use client";
 
 import { useMissionStore } from "@/store/mission-store";
+import { useConnectionStore } from "@/store/connection-store";
 import StatusBadge from "./StatusBadge";
 import { Server, Activity, Shield, Cpu, Network, Radio, Wifi } from "lucide-react";
 
 export default function SystemHealth() {
   const systemHealth = useMissionStore((state) => state.systemHealth);
+  const { connectionStatus } = useConnectionStore();
+
+  const activeConnStatus = connectionStatus === "connected" ? "ONLINE" :
+                           connectionStatus === "connecting" ? "DEGRADED" : "OFFLINE";
 
   return (
     <div className="space-y-4 font-mono">
@@ -26,7 +31,7 @@ export default function SystemHealth() {
             <Server className="h-3.5 w-3.5 text-cyan-500/70" /> 
             MISSION_SERVER
           </span>
-          <StatusBadge status={systemHealth.missionServer} />
+          <StatusBadge status={activeConnStatus} />
         </div>
 
         {/* Telemetry Feed */}
@@ -44,7 +49,7 @@ export default function SystemHealth() {
             <Network className="h-3.5 w-3.5 text-cyan-500/70" /> 
             WEBSOCKET_CONN
           </span>
-          <StatusBadge status={systemHealth.webSocketConnection} />
+          <StatusBadge status={activeConnStatus} />
         </div>
 
         {/* Scout Network */}

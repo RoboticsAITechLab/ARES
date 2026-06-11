@@ -21,6 +21,7 @@ import {
 import { MISSION_INFO } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { useMissionStore } from "@/store/mission-store";
+import { useConnectionStore } from "@/store/connection-store";
 
 const iconMap = {
   LayoutDashboard,
@@ -37,6 +38,8 @@ const iconMap = {
 export default function Sidebar() {
   const pathname = usePathname();
   const { isSidebarOpen, setSidebarOpen, fleet, events, systemHealth, theme, layoutDensity } = useMissionStore();
+  const { connectionStatus } = useConnectionStore();
+
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -194,9 +197,13 @@ export default function Sidebar() {
         <div className="p-4 border-t border-slate-800 bg-slate-950/20 font-mono text-[9px] space-y-2 text-slate-500">
           <div className="flex justify-between items-center">
             <span>DSN RELAY</span>
-            <span className="text-emerald-400 font-bold flex items-center gap-1 animate-glow">
+            <span className={cn(
+              "font-bold flex items-center gap-1 animate-glow",
+              connectionStatus === "connected" ? "text-emerald-400" :
+              connectionStatus === "connecting" ? "text-amber-400 animate-pulse" : "text-rose-500"
+            )}>
               <Wifi className="h-3 w-3" />
-              ONLINE
+              {connectionStatus.toUpperCase()}
             </span>
           </div>
           <div className="flex justify-between items-center">
