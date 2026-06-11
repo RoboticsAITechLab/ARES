@@ -75,8 +75,15 @@ export default function MapSidebar({
                 {selectedRover.speed.toFixed(2)} m/s
               </span>
             </div>
+            <div className="flex justify-between border-b border-slate-900 pb-1.5">
+              <span className="text-slate-500">HEADING:</span>
+              <span className="font-bold text-slate-100 tabular-nums">
+                {selectedRover.heading}°
+              </span>
+            </div>
             <div className="flex justify-between border-b border-slate-900 pb-1.5 flex-col gap-1.5">
               <span className="text-slate-500 font-bold">POWER CORE:</span>
+
               <div className="flex justify-between items-center gap-2">
                 <div className="h-1 flex-1 bg-slate-900 rounded-full overflow-hidden">
                   <div 

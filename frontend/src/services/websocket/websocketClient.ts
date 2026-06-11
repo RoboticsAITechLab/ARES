@@ -1,4 +1,5 @@
 import { useConnectionStore } from "../../store/connection-store";
+import { useMissionStore } from "../../store/mission-store";
 import { WebSocketMessage } from "./websocket.types";
 
 export class AresWebSocketClient {
@@ -85,6 +86,9 @@ export class AresWebSocketClient {
       case "heartbeat":
         console.log(`[ARES WS Client] Heartbeat sync: Sol 142 synchronization complete. timestamp: ${message.timestamp}`);
         store.setLastHeartbeat(message.timestamp);
+        break;
+      case "fleet_update":
+        useMissionStore.getState().updateFleet(message.data);
         break;
       default:
         console.warn("[ARES WS Client] Unhandled message type:", message);

@@ -42,6 +42,7 @@ interface MissionStoreState {
 
   // Setters
   setFleet: (fleet: Fleet) => void;
+  updateFleet: (fleet: Fleet) => void;
   setTelemetry: (telemetry: TelemetryData) => void;
   setMap: (map: MapState) => void;
   setMissionControl: (missionControl: MissionControlState) => void;
@@ -82,6 +83,7 @@ export const useMissionStore = create<MissionStoreState>((set) => ({
   events: [],
 
   setFleet: (fleet) => set({ fleet }),
+  updateFleet: (fleet) => set({ fleet }),
   setTelemetry: (telemetry) => set({ telemetry }),
   setMap: (map) => set({ map }),
   setMissionControl: (missionControl) => set({ missionControl }),

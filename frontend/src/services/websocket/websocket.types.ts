@@ -1,3 +1,5 @@
+import { Fleet } from "../../types/Fleet";
+
 export type WebSocketMessage =
   | {
       type: "connection";
@@ -6,4 +8,10 @@ export type WebSocketMessage =
   | {
       type: "heartbeat";
       timestamp: number;
+    }
+  | {
+      type: "fleet_update";
+      data: Fleet;
+      timestamp: number;
     };
+

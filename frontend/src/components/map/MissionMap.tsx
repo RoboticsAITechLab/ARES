@@ -116,11 +116,11 @@ export default function MissionMap({ selectedRoverId }: MissionMapProps) {
           {/* 1. Static Grids */}
           <MapGrid width={mapWidth} height={mapHeight} />
 
-          {/* 2. Geofence Areas layer */}
-          {showGeofence && <MapGeofence projectCoords={projectCoords} />}
+          {/* 2. Geofence Areas layer - disabled for Level 2 */}
+          {/* {showGeofence && <MapGeofence projectCoords={projectCoords} />} */}
 
-          {/* 3. Waypoints & Route Overlays layer */}
-          {showRoutes && routes.map((route) => {
+          {/* 3. Waypoints & Route Overlays layer - disabled for Level 2 */}
+          {/* {showRoutes && routes.map((route) => {
             // Map waypoints to projected points
             const projectedPoints = route.waypoints.map(wp => projectCoords(wp.latitude, wp.longitude));
             
@@ -129,10 +129,8 @@ export default function MissionMap({ selectedRoverId }: MissionMapProps) {
 
             return (
               <g key={route.id}>
-                {/* Draw connecting route path */}
                 <MapRoute points={projectedPoints} colorClass={colorClass} dashed={true} />
 
-                {/* Draw individual waypoints */}
                 {route.waypoints.map((wp) => {
                   const xy = projectCoords(wp.latitude, wp.longitude);
                   return (
@@ -150,7 +148,7 @@ export default function MissionMap({ selectedRoverId }: MissionMapProps) {
                 })}
               </g>
             );
-          })}
+          })} */}
 
           {/* 4. Active Transmission Radar Pulses */}
           {motherRover && <RadarPulse cx={motherXY.x} cy={motherXY.y} colorClass="stroke-cyan-500" />}
