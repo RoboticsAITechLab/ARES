@@ -50,21 +50,24 @@ const handleTelemetryUpdate = async (packet: FleetPacket) => {
 };
 
 let virtualRover: VirtualRover | null = null;
-let motherAdapter: MotherRoverAdapter | null = null;
+const parser = new MotherRoverParser();
+
+// Always setup telemetry parser to route physical telemetry if it is received
+wsManager.onTelemetry((data) => {
+  const packet = parser.parsePacket(JSON.stringify(data));
+  if (packet) {
+    handleTelemetryUpdate(packet);
+    // If we receive actual telemetry from the physical rover, stop the virtual simulator
+    if (virtualRover) {
+      console.log("[SYSTEM] Physical telemetry received. Stopping virtual simulator.");
+      virtualRover.stopSimulator();
+      virtualRover = null;
+    }
+  }
+});
 
 if (isPhysical) {
-  Logger.log("INFO", "SYSTEM", "Starting in PHYSICAL Rover mode.");
-  const parser = new MotherRoverParser();
-  motherAdapter = new MotherRoverAdapter(
-    {
-      host: process.env.ROVER_HOST || "192.168.4.1",
-      port: parseInt(process.env.ROVER_PORT || "3002"),
-      protocol: "ws"
-    },
-    parser,
-    handleTelemetryUpdate
-  );
-  motherAdapter.connect();
+  Logger.log("INFO", "SYSTEM", "Starting in PHYSICAL Rover mode (Cloud Router).");
 } else {
   Logger.log("INFO", "SYSTEM", "Starting in VIRTUAL Rover mode.");
   virtualRover = new VirtualRover(handleTelemetryUpdate);
@@ -72,8 +75,11 @@ if (isPhysical) {
 }
 
 wsManager.onCommand((command, value) => {
-  if (isPhysical && motherAdapter) {
-    motherAdapter.sendCommand(command, value);
+  // If a physical rover is connected, always prioritize sending commands to it
+  if (wsManager.isRoverConnected()) {
+    wsManager.sendCommandToRover(command, value);
+  } else if (isPhysical) {
+    wsManager.sendCommandToRover(command, value);
   } else if (virtualRover) {
     virtualRover.handleCommand(command, value);
   }
@@ -86,7 +92,6 @@ server.listen(port, () => {
 const gracefulShutdown = () => {
   console.log("[ARES Server] Received shutdown signal. Cleaning up resources...");
   if (virtualRover) virtualRover.stopSimulator();
-  if (motherAdapter) motherAdapter.disconnect();
   wsManager.close();
   server.close(() => {
     console.log("[ARES Server] HTTP server closed. Exiting process.");

@@ -14,8 +14,15 @@ export class AresWebSocketClient {
     this.url = url;
   }
 
-  public static getInstance(url = "ws://localhost:3001/ws?token=ares_auth_secret"): AresWebSocketClient {
+  public static getInstance(): AresWebSocketClient {
     if (!AresWebSocketClient.instance) {
+      let url = "ws://localhost:3001/ws?token=ares_auth_secret&role=controller";
+      if (typeof window !== "undefined") {
+        const hostname = window.location.hostname;
+        if (hostname !== "localhost" && hostname !== "127.0.0.1") {
+          url = "wss://ares-mk3j.onrender.com/ws?token=ares_auth_secret&role=controller";
+        }
+      }
       AresWebSocketClient.instance = new AresWebSocketClient(url);
     }
     return AresWebSocketClient.instance;
