@@ -20,7 +20,7 @@ export default function MapSidebar({
     <div className="border border-slate-800 bg-[#111827] rounded p-4 flex flex-col gap-4 font-mono w-full shadow-md select-none h-full justify-between">
       {/* Rover Selection list */}
       <div className="space-y-3">
-        <h3 className="text-xs font-semibold text-slate-400 tracking-wider flex items-center gap-1.5 uppercase">
+        <h3 className="text-xs font-semibold text-slate 400 tracking-wider flex items-center gap-1.5 uppercase">
           <Cpu className="h-3.5 w-3.5 text-cyan-400" />
           ROVER_SELECTION
         </h3>

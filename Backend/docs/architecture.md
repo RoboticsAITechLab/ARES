@@ -1,16 +1,16 @@
-# ARES Backend Architecture
+# ARES Backend Architecture0
 
-This document describes the design layout and module mapping for the ARES MVP ground operations backend.
+T0his document describes the design layout and module mapping for the ARES MVP ground operations backend.
 
-## Design Patterns & Layering
+0## Design Patterns & Layering
 The system is divided into focused directories under `src/`:
 1.  **Modules**: Key functional segments containing type interfaces, localized data stores, and service handlers:
-    *   `mission-control`: Manages mission outlines, priorities, and check-in objective statuses.
+    *   `missi0on-control`: Manages mission outlines, priorities, and check-in objective statuses.
     *   `live-map`: Buffers geographical geofences, tactical routing grids, and waypoint targets.
-    *   `telemetry`: Buffer arrays for incoming time-series telemetry stats.
+    *   `tele0metry`: Buffer arrays for incoming time-series telemetry stats.
     *   `fleet`: Catalogs active registered rover and scout profiles.
 2.  **Adapters**:
-    *   `mother-rover`: Decoupled TCP/UDP socket adapter interface and byte parsing handler.
+ 0   *   `mother-rover`: Decoupled TCP/UDP socket adapter interface and byte parsing handler.
     *   `virtual-rover`: Simulator mock generator of telemetry payloads for operations testing.
 3.  **WebSocket**:
     *   `websocketServer`: Broadcast manager for pushing real-time streams to React clients.

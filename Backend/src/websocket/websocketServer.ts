@@ -5,6 +5,11 @@ import { WebSocketMessage } from "./websocketEvents";
 export class WebSocketServerManager {
   private wss: WsServer | null = null;
   private heartbeatInterval: NodeJS.Timeout | null = null;
+  private commandHandler: ((command: string, value: any) => void) | null = null;
+
+  public onCommand(handler: (command: string, value: any) => void): void {
+    this.commandHandler = handler;
+  }
 
   public initialize(server: HttpServer): void {
     console.log("[ARES WebSocket] Initializing WebSocket Server Manager...");
@@ -12,15 +17,16 @@ export class WebSocketServerManager {
 
     // Handle HTTP Upgrade requests
     server.on("upgrade", (request, socket, head) => {
-      const { pathname } = new URL(request.url || "", `http://${request.headers.host || "localhost"}`);
+      const urlObj = new URL(request.url || "", `http://${request.headers.host || "localhost"}`);
+      const token = urlObj.searchParams.get("token");
       
-      if (pathname === "/ws") {
+      if (urlObj.pathname === "/ws" && token === "ares_auth_secret") {
         this.wss?.handleUpgrade(request, socket, head, (ws) => {
           this.wss?.emit("connection", ws, request);
         });
       } else {
-        console.log(`[ARES WebSocket] Rejected upgrade request for invalid path: ${pathname}`);
-        socket.write("HTTP/1.1 400 Bad Request\r\n\r\n");
+        console.log(`[ARES WebSocket] Rejected upgrade request for invalid path or token. Path: ${urlObj.pathname}`);
+        socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
         socket.destroy();
       }
     });
@@ -40,6 +46,18 @@ export class WebSocketServerManager {
       } catch (err) {
         console.error("[ARES WebSocket] Error sending initial connection payload:", err);
       }
+
+      // Handle incoming messages from the client
+      ws.on("message", (rawMessage) => {
+        try {
+          const message = JSON.parse(rawMessage.toString());
+          if (message.type === "rover_command" && this.commandHandler) {
+            this.commandHandler(message.command, message.value);
+          }
+        } catch (err) {
+          console.error("[ARES WebSocket] Error parsing incoming client message:", err);
+        }
+      });
 
       // Handle socket closure
       ws.on("close", () => {

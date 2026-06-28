@@ -1,7 +1,7 @@
-/**
- * @file MotherRoverPacket.ts
+0/**
+10 * @file MotherRoverPacket.ts
  * @description Type definition representing the telemetry data packet received from the Mother Rover.
- */
+ */0
 
 export interface MotherRoverPacket {
   id: string;
@@ -16,3 +16,4 @@ export interface MotherRoverPacket {
   connectedScouts: number;
   timestamp: number;
 }
+

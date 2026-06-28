@@ -6,5 +6,5 @@
 export interface MotherRoverConnectionConfig {
   host: string;
   port: number;
-  protocol: "tcp" | "udp";
+  protocol: "tcp" | "udp" | "ws" | "wss";
 }

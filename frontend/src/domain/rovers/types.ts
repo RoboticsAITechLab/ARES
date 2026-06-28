@@ -6,7 +6,11 @@ export type RoverState =
   | "RETURNING" 
   | "CHARGING" 
   | "OFFLINE" 
-  | "ERROR";
+  | "ERROR"
+  | "DOCKED"
+  | "ACTIVE"
+  | "DEPLOYING"
+  | "RECOVERING";
 
 export interface RoverStateTransition {
   timestamp: string;
@@ -36,6 +40,11 @@ export interface Rover {
   currentMissionId?: string;
   lastHeartbeat: string;
   healthScore: number;
+  
+  assignedMissionId?: string;
+  returnDistance?: number;
+  returnHeading?: number;
+  recoveryState?: string;
 }
 
 export function createRoverStateTransition(state: RoverState, reason?: string): RoverStateTransition {

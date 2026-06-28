@@ -46,7 +46,8 @@ export default function MapPage() {
   return (
     <div className="space-y-6 font-mono text-slate-100 animate-fade-in">
       {/* Page Header */}
-      <div className="p-4 rounded border border-slate-800 bg-[#111827] flex items-center justify-between shadow-lg select-none">
+      <div className="p-4 rounded border border-slate-800 bg-[#111827] flex items-center justify-between++++++++
+      lg select-none">
         <div className="flex items-center gap-3">
           <Navigation className="h-5 w-5 text-cyan-400 rotate-45 animate-status-pulse" />
           <div>

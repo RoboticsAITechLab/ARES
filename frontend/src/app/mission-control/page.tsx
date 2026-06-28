@@ -12,6 +12,7 @@ import Alerts from "@/components/mission/alerts";
 import MissionTimeline from "@/components/mission/mission-timeline";
 import QuickActions from "@/components/QuickActions";
 import SystemHealth from "@/components/SystemHealth";
+import RoverController from "@/components/mission/rover-controller";
 
 export default function MissionControlPage() {
   const { fleet, events, isEmergencyStop, missionControl } = useMissionStore();
@@ -87,6 +88,8 @@ export default function MissionControlPage() {
           </div>
 
           <QuickActions />
+
+          <RoverController />
         </div>
 
         {/* Column 2: Scout Fleet Grid */}

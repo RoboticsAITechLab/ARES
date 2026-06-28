@@ -14,7 +14,7 @@ export class AresWebSocketClient {
     this.url = url;
   }
 
-  public static getInstance(url = "ws://localhost:3001/ws"): AresWebSocketClient {
+  public static getInstance(url = "ws://localhost:3001/ws?token=ares_auth_secret"): AresWebSocketClient {
     if (!AresWebSocketClient.instance) {
       AresWebSocketClient.instance = new AresWebSocketClient(url);
     }
@@ -113,6 +113,18 @@ export class AresWebSocketClient {
       this.reconnectTimeout = null;
       this.connect();
     }, this.reconnectInterval);
+  }
+
+  public send(message: any): void {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      try {
+        this.ws.send(JSON.stringify(message));
+      } catch (err) {
+        console.error("[ARES WS Client] Failed to send message:", err);
+      }
+    } else {
+      console.warn("[ARES WS Client] WebSocket is not open. Cannot send message.");
+    }
   }
 
   public disconnect(): void {

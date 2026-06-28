@@ -1,0 +1,56 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Rover {
+  id           String      @id
+  name         String
+  type         String      // "mother" | "scout"
+  status       String      // "IDLE", "READY", etc.
+  battery      Float       @default(0.0)
+  signal       Int         @default(0)
+  temperature  Float       @default(0.0)
+  latitude     Float       @default(0.0)
+  longitude    Float       @default(0.0)
+  speed        Float       @default(0.0)
+  lastContact  DateTime    @default(now())
+  registeredAt DateTime    @default(now())
+  telemetries  Telemetry[]
+}
+
+model Telemetry {
+  id               Int      @id @default(autoincrement())
+  roverId          String
+  timestamp        DateTime @default(now())
+  batteryPercent   Float
+  batteryVoltage   Float
+  signalRssi       Int
+  obstacleDistance Float
+  pitch            Float
+  roll             Float
+  yaw              Float
+  speed            Float
+  rover            Rover    @relation(fields: [roverId], references: [id], onDelete: Cascade)
+}
+
+model MissionLog {
+  id        Int      @id @default(autoincrement())
+  timestamp DateTime @default(now())
+  severity  String   // "INFO" | "WARNING" | "CRITICAL"
+  category  String   // "SYSTEM" | "TELEMETRY" | "COMMS"
+  message   String
+}
+
+model FirmwareRelease {
+  id          Int      @id @default(autoincrement())
+  version     String   @unique
+  checksum    String
+  filePath    String
+  uploadedAt  DateTime @default(now())
+  description String?
+}
