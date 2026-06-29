@@ -1,6 +1,7 @@
 import { Server as HttpServer } from "http";
 import { WebSocketServer as WsServer, WebSocket } from "ws";
 import { WebSocketMessage } from "./websocketEvents";
+import { prisma } from "../prisma";
 
 export class WebSocketServerManager {
   private wss: WsServer | null = null;
@@ -40,17 +41,77 @@ export class WebSocketServerManager {
     });
 
     // Handle incoming client connections
-    this.wss.on("connection", (ws: WebSocket, request: any) => {
+    this.wss.on("connection", async (ws: WebSocket, request: any) => {
       const urlObj = new URL(request.url || "", `http://${request.headers.host || "localhost"}`);
       const role = urlObj.searchParams.get("role") || "controller";
 
       if (role === "rover") {
-        console.log("[ARES WebSocket] Physical Rover client connected successfully.");
-        this.roverSocket = ws;
+        const roverId = urlObj.searchParams.get("roverId") || "mother-rover";
+        const apiKey = urlObj.searchParams.get("apiKey") || "generated-key";
+
+        // Query database to authenticate device
+        try {
+          let dbRover = await prisma.rover.findUnique({
+            where: { id: roverId }
+          });
+
+          if (!dbRover) {
+            // Bootstrap rover on first boot/connection
+            dbRover = await prisma.rover.create({
+              data: {
+                id: roverId,
+                name: roverId === "mother-rover" ? "Mother Rover" : roverId,
+                type: "mother",
+                status: "READY",
+                apiKey: apiKey,
+                deviceSecret: "unique-secret"
+              }
+            });
+          } else if (dbRover.apiKey !== apiKey) {
+            console.error(`[ARES WebSocket] Rover authentication failed for ID: ${roverId}`);
+            await prisma.roverEvent.create({
+              data: {
+                roverId,
+                eventType: "Crash",
+                message: "Websocket connection rejected: Invalid credentials"
+              }
+            });
+            ws.close(4001, "Invalid API Key");
+            return;
+          }
+
+          console.log(`[ARES WebSocket] Rover ${roverId} authenticated and connected.`);
+          this.roverSocket = ws;
+
+          await prisma.roverEvent.create({
+            data: {
+              roverId,
+              eventType: "Reboot",
+              message: "Rover connected to telemetry gateway"
+            }
+          });
+        } catch (err) {
+          console.error("[ARES WebSocket] Database error during rover connection auth:", err);
+          ws.close(4500, "Database Error");
+          return;
+        }
 
         ws.on("message", (rawMessage) => {
           try {
             const message = JSON.parse(rawMessage.toString());
+
+            // Handle logging broadcasts from the physical rover
+            if (message.type === "rover_log") {
+              this.broadcast(message);
+              return;
+            }
+
+            // Handle command acknowledgements from the physical rover
+            if (message.type === "command_ack") {
+              this.broadcast(message);
+              return;
+            }
+
             if (this.telemetryHandler) {
               this.telemetryHandler(message);
             }
@@ -137,7 +198,7 @@ export class WebSocketServerManager {
     }, 5000); // 5 seconds interval
   }
 
-  public broadcast(message: WebSocketMessage): void {
+  public broadcast(message: any): void {
     const payload = JSON.stringify(message);
 
     this.controllers.forEach((client) => {
@@ -199,4 +260,3 @@ export class WebSocketServerManager {
     }
   }
 }
-

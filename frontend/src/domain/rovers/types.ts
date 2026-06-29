@@ -45,6 +45,10 @@ export interface Rover {
   returnDistance?: number;
   returnHeading?: number;
   recoveryState?: string;
+  pitch?: number;
+  roll?: number;
+  obstacleDistance?: number;
+  heading?: number;
 }
 
 export function createRoverStateTransition(state: RoverState, reason?: string): RoverStateTransition {

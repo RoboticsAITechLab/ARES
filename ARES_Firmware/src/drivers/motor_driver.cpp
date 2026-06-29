@@ -46,7 +46,6 @@ void MotorDriver::setSpeeds(float lfSpeed, float lrSpeed, float rfSpeed, float r
 }
 
 void MotorDriver::stopAll() {
-    // Dynamic braking: IN1=HIGH, IN2=HIGH (or IN1=LOW, IN2=LOW depending on decay, TB6612 does short brake when both IN1 & IN2 are HIGH)
     digitalWrite(MotorPins::LF_IN1, HIGH);
     digitalWrite(MotorPins::LF_IN2, HIGH);
     ledcWrite(PWMConfig::LF_CHANNEL, 0);
@@ -65,32 +64,25 @@ void MotorDriver::stopAll() {
 }
 
 void MotorDriver::setStandby(bool standby) {
-    // STBY Pin: LOW = Standby (all motors off), HIGH = Active
     digitalWrite(MotorPins::STBY, standby ? LOW : HIGH);
 }
 
 void MotorDriver::writeMotor(int in1Pin, int in2Pin, int pwmChannel, float speed) {
-    // Constrain speed to [-1.0, 1.0]
     speed = constrain(speed, -1.0f, 1.0f);
 
-    // Determine direction
     if (speed > 0.01f) {
-        // Forward direction
         digitalWrite(in1Pin, HIGH);
         digitalWrite(in2Pin, LOW);
     } else if (speed < -0.01f) {
-        // Reverse direction
         digitalWrite(in1Pin, LOW);
         digitalWrite(in2Pin, HIGH);
     } else {
-        // Short brake / Stop
         digitalWrite(in1Pin, HIGH);
         digitalWrite(in2Pin, HIGH);
         ledcWrite(pwmChannel, 0);
         return;
     }
 
-    // Calculate duty cycle: 10-bit resolution -> max value is 1023
     int dutyCycle = static_cast<int>(fabs(speed) * 1023.0f);
     ledcWrite(pwmChannel, dutyCycle);
 }

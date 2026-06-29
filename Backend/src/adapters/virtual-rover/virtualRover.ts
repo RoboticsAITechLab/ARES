@@ -50,6 +50,34 @@ export class VirtualRover {
       } else if (dir === "right") {
         this.heading = (this.heading + 15) % 360;
         updated = true;
+      } else if (dir === "forward-left") {
+        if (this.speed === 0.0) this.speed = 0.5;
+        this.heading = (this.heading - 10 + 360) % 360;
+        const rad = (this.heading * Math.PI) / 180;
+        this.x = Math.max(10, Math.min(90, this.x + Math.round(Math.cos(rad) * 2)));
+        this.y = Math.max(10, Math.min(90, this.y + Math.round(Math.sin(rad) * 2)));
+        updated = true;
+      } else if (dir === "forward-right") {
+        if (this.speed === 0.0) this.speed = 0.5;
+        this.heading = (this.heading + 10) % 360;
+        const rad = (this.heading * Math.PI) / 180;
+        this.x = Math.max(10, Math.min(90, this.x + Math.round(Math.cos(rad) * 2)));
+        this.y = Math.max(10, Math.min(90, this.y + Math.round(Math.sin(rad) * 2)));
+        updated = true;
+      } else if (dir === "backward-left") {
+        if (this.speed === 0.0) this.speed = 0.5;
+        this.heading = (this.heading - 10 + 360) % 360;
+        const rad = (this.heading * Math.PI) / 180;
+        this.x = Math.max(10, Math.min(90, this.x - Math.round(Math.cos(rad) * 2)));
+        this.y = Math.max(10, Math.min(90, this.y - Math.round(Math.sin(rad) * 2)));
+        updated = true;
+      } else if (dir === "backward-right") {
+        if (this.speed === 0.0) this.speed = 0.5;
+        this.heading = (this.heading + 10) % 360;
+        const rad = (this.heading * Math.PI) / 180;
+        this.x = Math.max(10, Math.min(90, this.x - Math.round(Math.cos(rad) * 2)));
+        this.y = Math.max(10, Math.min(90, this.y - Math.round(Math.sin(rad) * 2)));
+        updated = true;
       }
     } else if (command === "stop") {
       this.speed = 0.0;
@@ -70,6 +98,9 @@ export class VirtualRover {
     // Simulated temperature fluctuation
     const temperature = Math.floor(-15 + (Math.random() * 4 - 2));
 
+    const pitch = parseFloat((Math.sin(Date.now() / 4000) * 8 + Math.random() * 2).toFixed(1));
+    const roll = parseFloat((Math.cos(Date.now() / 3000) * 5 + Math.random() * 2).toFixed(1));
+
     const motherPacket: MotherRoverPacket = {
       id: "mother-rover",
       battery: this.battery,
@@ -81,7 +112,10 @@ export class VirtualRover {
       y: this.y,
       status: "online",
       connectedScouts: 0,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      pitch,
+      roll,
+      obstacleDistance: 150
     };
 
     const fleetPacket: FleetPacket = {

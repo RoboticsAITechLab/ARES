@@ -24,16 +24,17 @@ public:
         }
 
         const char* type = doc["type"];
-        if (!type || strcmp(type, "rover_command") != 0) {
+        if (!type || (strcmp(type, "rover_command") != 0 && strcmp(type, "config_update") != 0)) {
             return false;
         }
 
         const char* command = doc["command"];
         if (!command) {
-            return false;
+            outCmd.command = String(type); // fallback
+        } else {
+            outCmd.command = String(command);
         }
 
-        outCmd.command = String(command);
         outCmd.servoPitch = 90;
         outCmd.servoYaw = 90;
         
@@ -61,7 +62,13 @@ public:
         return true;
     }
 
-    static String serializeTelemetry(float batteryVoltage, float batteryPercent, int rssi, bool watchdogTriggered, bool batteryLow, float speed, float pitch, float roll, float yaw, float obstacleDistance) {
+    static String serializeTelemetry(
+        float batteryVoltage, float batteryPercent, int rssi, bool watchdogTriggered, 
+        bool batteryLow, float speed, float pitch, float roll, float yaw, float obstacleDistance,
+        const String& firmwareVersion, uint32_t heapFree, float cpuTemp,
+        const String& bootReason, const String& lastCrash, int rollbackCount, 
+        const String& otaStatus, bool safeMode
+    ) {
         JsonDocument doc;
         doc["type"] = "rover_telemetry";
         doc["batteryVoltage"] = batteryVoltage;
@@ -75,7 +82,22 @@ public:
         doc["yaw"] = yaw;
         doc["obstacleDistance"] = obstacleDistance;
         doc["uptime"] = millis() / 1000;
+
+        // Expanded telemetry structure
+        doc["roverId"] = "mother-rover";
+        doc["firmwareVersion"] = firmwareVersion;
+        doc["battery"] = batteryPercent;
+        doc["wifiRssi"] = rssi;
+        doc["heapFree"] = heapFree;
+        doc["cpuTemp"] = cpuTemp;
         
+        // Hardened recovery fields
+        doc["bootReason"] = bootReason;
+        doc["lastCrash"] = lastCrash;
+        doc["rollbackCount"] = rollbackCount;
+        doc["otaStatus"] = otaStatus;
+        doc["safeMode"] = safeMode;
+
         String output;
         serializeJson(doc, output);
         return output;

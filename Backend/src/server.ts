@@ -1,6 +1,6 @@
 /**
  * @file server.ts
- * @description Boostrap gateway manager resolving configuration modes, database persistence, and client relays.
+ * @description Bootstrap gateway manager resolving configuration modes, database persistence, and client relays.
  */
 
 import { createServer } from "http";
@@ -8,12 +8,12 @@ import dotenv from "dotenv";
 import app from "./app";
 import { WebSocketServerManager } from "./websocket";
 import { VirtualRover } from "./adapters/virtual-rover";
-import { MotherRoverAdapter } from "./adapters/mother-rover/motherRover.adapter";
 import { MotherRoverParser } from "./adapters/mother-rover/motherRover.parser";
 import { TelemetryStore } from "./modules/telemetry/telemetry.store";
 import { FleetStore } from "./modules/fleet/fleet.store";
 import { FleetPacket } from "./types/FleetPacket";
 import { Logger } from "./logger";
+import { prisma } from "./prisma";
 
 dotenv.config();
 
@@ -25,17 +25,51 @@ const server = createServer(app);
 const wsManager = new WebSocketServerManager();
 wsManager.initialize(server);
 
+// Share wsManager instance with HTTP API router
+(app as any).wsManager = wsManager;
+
 const telemetryStore = new TelemetryStore();
 const fleetStore = new FleetStore();
 
 const handleTelemetryUpdate = async (packet: FleetPacket) => {
   try {
     if (packet.mother) {
-      await fleetStore.registerRover({
-        id: packet.mother.id,
-        name: "Mother Rover",
-        type: "mother"
+      const m = packet.mother as any;
+      // Upsert the detailed rover telemetry fields into the DB
+      await prisma.rover.upsert({
+        where: { id: m.id },
+        update: {
+          battery: m.battery,
+          signal: m.signal,
+          temperature: m.temperature,
+          speed: m.speed,
+          lastContact: new Date(),
+          firmwareVersion: m.firmwareVersion || "1.0.0",
+          bootReason: m.bootReason || "poweron",
+          lastCrash: m.lastCrash || "",
+          rollbackCount: m.rollbackCount || 0,
+          otaStatus: m.otaStatus || "idle",
+          safeMode: m.safeMode || false
+        },
+        create: {
+          id: m.id,
+          name: m.id === "mother-rover" ? "Mother Rover" : m.id,
+          type: "mother",
+          status: "READY",
+          battery: m.battery,
+          signal: m.signal,
+          temperature: m.temperature,
+          speed: m.speed,
+          firmwareVersion: m.firmwareVersion || "1.0.0",
+          bootReason: m.bootReason || "poweron",
+          lastCrash: m.lastCrash || "",
+          rollbackCount: m.rollbackCount || 0,
+          otaStatus: m.otaStatus || "idle",
+          safeMode: m.safeMode || false
+        }
       });
+
+      // Append standard historical data
       await telemetryStore.appendHistory(packet.mother.id, packet.mother);
     }
   } catch (err) {

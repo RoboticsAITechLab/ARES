@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
 
 export default function RoverController() {
   const { connectionStatus } = useConnectionStore();
-  const { addLog, isEmergencyStop } = useMissionStore();
+  const { addLog, isEmergencyStop, rovers } = useMissionStore();
   
   const [controlMode, setControlMode] = useState<"manual" | "auto">("manual");
   const [speed, setSpeed] = useState<number>(0.5);
@@ -38,6 +38,10 @@ export default function RoverController() {
   });
 
   const wsClientRef = useRef<AresWebSocketClient | null>(null);
+  const pressedKeysRef = useRef<Set<string>>(new Set());
+  const lastSentCommandRef = useRef<string>("stop");
+
+  const motherRover = rovers.find(r => r.id === "mother-rover" || r.type === "mother");
 
   useEffect(() => {
     wsClientRef.current = AresWebSocketClient.getInstance();
@@ -75,57 +79,93 @@ export default function RoverController() {
     }
   };
 
+  const updateMovement = () => {
+    const keys = pressedKeysRef.current;
+    let nextDir: string | null = null;
+
+    const w = keys.has("w") || keys.has("arrowup");
+    const s = keys.has("s") || keys.has("arrowdown");
+    const a = keys.has("a") || keys.has("arrowleft");
+    const d = keys.has("d") || keys.has("arrowright");
+
+    if (w) {
+      if (a) nextDir = "forward-left";
+      else if (d) nextDir = "forward-right";
+      else nextDir = "forward";
+    } else if (s) {
+      if (a) nextDir = "backward-left";
+      else if (d) nextDir = "backward-right";
+      else nextDir = "backward";
+    } else if (a) {
+      nextDir = "left";
+    } else if (d) {
+      nextDir = "right";
+    }
+
+    if (nextDir) {
+      if (lastSentCommandRef.current !== nextDir) {
+        lastSentCommandRef.current = nextDir;
+        sendRoverCommand("move", nextDir);
+      }
+    } else {
+      if (lastSentCommandRef.current !== "stop") {
+        lastSentCommandRef.current = "stop";
+        sendRoverCommand("stop");
+      }
+    }
+  };
+
   // Keyboard Event Listeners
   useEffect(() => {
     if (!isKeyboardActive || isEmergencyStop || connectionStatus !== "connected") return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       const key = e.key.toLowerCase();
-      if (["w", "arrowup"].includes(key)) {
+      if (["w", "s", "a", "d", "arrowup", "arrowdown", "arrowleft", "arrowright", " "].includes(key) || e.code === "Space") {
         e.preventDefault();
-        if (!activeKeys.w) {
-          setActiveKeys(prev => ({ ...prev, w: true }));
-          sendRoverCommand("move", "forward");
+        
+        if (key === " " || e.code === "Space") {
+          if (!pressedKeysRef.current.has("space")) {
+            pressedKeysRef.current.add("space");
+            setActiveKeys(prev => ({ ...prev, Space: true }));
+            if (lastSentCommandRef.current !== "stop") {
+              lastSentCommandRef.current = "stop";
+              sendRoverCommand("stop");
+            }
+          }
+          return;
         }
-      } else if (["s", "arrowdown"].includes(key)) {
-        e.preventDefault();
-        if (!activeKeys.s) {
-          setActiveKeys(prev => ({ ...prev, s: true }));
-          sendRoverCommand("move", "backward");
-        }
-      } else if (["a", "arrowleft"].includes(key)) {
-        e.preventDefault();
-        if (!activeKeys.a) {
-          setActiveKeys(prev => ({ ...prev, a: true }));
-          sendRoverCommand("move", "left");
-        }
-      } else if (["d", "arrowright"].includes(key)) {
-        e.preventDefault();
-        if (!activeKeys.d) {
-          setActiveKeys(prev => ({ ...prev, d: true }));
-          sendRoverCommand("move", "right");
-        }
-      } else if (e.code === "Space" || key === " ") {
-        e.preventDefault();
-        if (!activeKeys.Space) {
-          setActiveKeys(prev => ({ ...prev, Space: true }));
-          sendRoverCommand("stop");
+
+        const mapKey = ["arrowup", "w"].includes(key) ? "w" :
+                       ["arrowdown", "s"].includes(key) ? "s" :
+                       ["arrowleft", "a"].includes(key) ? "a" : "d";
+
+        if (!pressedKeysRef.current.has(key)) {
+          pressedKeysRef.current.add(key);
+          setActiveKeys(prev => ({ ...prev, [mapKey]: true }));
+          updateMovement();
         }
       }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
       const key = e.key.toLowerCase();
-      if (["w", "arrowup"].includes(key)) {
-        setActiveKeys(prev => ({ ...prev, w: false }));
-      } else if (["s", "arrowdown"].includes(key)) {
-        setActiveKeys(prev => ({ ...prev, s: false }));
-      } else if (["a", "arrowleft"].includes(key)) {
-        setActiveKeys(prev => ({ ...prev, a: false }));
-      } else if (["d", "arrowright"].includes(key)) {
-        setActiveKeys(prev => ({ ...prev, d: false }));
-      } else if (e.code === "Space" || key === " ") {
-        setActiveKeys(prev => ({ ...prev, Space: false }));
+      if (["w", "s", "a", "d", "arrowup", "arrowdown", "arrowleft", "arrowright", " "].includes(key) || e.code === "Space") {
+        e.preventDefault();
+        
+        if (key === " " || e.code === "Space") {
+          pressedKeysRef.current.delete("space");
+          setActiveKeys(prev => ({ ...prev, Space: false }));
+          return;
+        }
+
+        const mapKey = ["arrowup", "w"].includes(key) ? "w" :
+                       ["arrowdown", "s"].includes(key) ? "s" :
+                       ["arrowleft", "a"].includes(key) ? "a" : "d";
+
+        pressedKeysRef.current.delete(key);
+        setActiveKeys(prev => ({ ...prev, [mapKey]: false }));
+        updateMovement();
       }
     };
 
@@ -135,13 +175,26 @@ export default function RoverController() {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
+      // Reset keys on unmount/deactivation
+      pressedKeysRef.current.clear();
+      setActiveKeys({ w: false, a: false, s: false, d: false, Space: false });
     };
-  }, [isKeyboardActive, activeKeys, isEmergencyStop, connectionStatus]);
+  }, [isKeyboardActive, isEmergencyStop, connectionStatus]);
 
   const handleSpeedChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const targetSpeed = parseFloat(e.target.value);
     setSpeed(targetSpeed);
     sendRoverCommand("speed", targetSpeed);
+  };
+
+  const handleButtonPress = (dir: string, mapKey: string) => {
+    setActiveKeys(prev => ({ ...prev, [mapKey]: true }));
+    sendRoverCommand("move", dir);
+  };
+
+  const handleButtonRelease = (mapKey: string) => {
+    setActiveKeys(prev => ({ ...prev, [mapKey]: false }));
+    sendRoverCommand("stop");
   };
 
   return (
@@ -214,9 +267,13 @@ export default function RoverController() {
             
             {/* Forward Button */}
             <button
-              onClick={() => sendRoverCommand("move", "forward")}
+              onMouseDown={() => handleButtonPress("forward", "w")}
+              onMouseUp={() => handleButtonRelease("w")}
+              onMouseLeave={() => handleButtonRelease("w")}
+              onTouchStart={() => handleButtonPress("forward", "w")}
+              onTouchEnd={() => handleButtonRelease("w")}
               className={cn(
-                "absolute top-2 w-10 h-10 rounded border flex items-center justify-center transition-all cursor-pointer",
+                "absolute top-2 w-10 h-10 rounded border flex items-center justify-center transition-all cursor-pointer select-none touch-none",
                 activeKeys.w
                   ? "bg-cyan-500 text-white border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.6)]"
                   : "bg-slate-900/90 text-slate-400 border-slate-800 hover:text-cyan-400 hover:border-cyan-500/40"
@@ -228,9 +285,13 @@ export default function RoverController() {
 
             {/* Turn Left Button */}
             <button
-              onClick={() => sendRoverCommand("move", "left")}
+              onMouseDown={() => handleButtonPress("left", "a")}
+              onMouseUp={() => handleButtonRelease("a")}
+              onMouseLeave={() => handleButtonRelease("a")}
+              onTouchStart={() => handleButtonPress("left", "a")}
+              onTouchEnd={() => handleButtonRelease("a")}
               className={cn(
-                "absolute left-2 w-10 h-10 rounded border flex items-center justify-center transition-all cursor-pointer",
+                "absolute left-2 w-10 h-10 rounded border flex items-center justify-center transition-all cursor-pointer select-none touch-none",
                 activeKeys.a
                   ? "bg-cyan-500 text-white border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.6)]"
                   : "bg-slate-900/90 text-slate-400 border-slate-800 hover:text-cyan-400 hover:border-cyan-500/40"
@@ -244,7 +305,7 @@ export default function RoverController() {
             <button
               onClick={() => sendRoverCommand("stop")}
               className={cn(
-                "w-12 h-12 rounded-full border flex flex-col items-center justify-center transition-all cursor-pointer font-black text-[9px] tracking-wide",
+                "w-12 h-12 rounded-full border flex flex-col items-center justify-center transition-all cursor-pointer font-black text-[9px] tracking-wide select-none",
                 activeKeys.Space
                   ? "bg-rose-600 text-white border-rose-500 shadow-[0_0_12px_rgba(239,68,68,0.7)]"
                   : "bg-slate-900 text-rose-500 border-rose-950/60 hover:bg-rose-950/20 hover:border-rose-600"
@@ -256,9 +317,13 @@ export default function RoverController() {
 
             {/* Turn Right Button */}
             <button
-              onClick={() => sendRoverCommand("move", "right")}
+              onMouseDown={() => handleButtonPress("right", "d")}
+              onMouseUp={() => handleButtonRelease("d")}
+              onMouseLeave={() => handleButtonRelease("d")}
+              onTouchStart={() => handleButtonPress("right", "d")}
+              onTouchEnd={() => handleButtonRelease("d")}
               className={cn(
-                "absolute right-2 w-10 h-10 rounded border flex items-center justify-center transition-all cursor-pointer",
+                "absolute right-2 w-10 h-10 rounded border flex items-center justify-center transition-all cursor-pointer select-none touch-none",
                 activeKeys.d
                   ? "bg-cyan-500 text-white border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.6)]"
                   : "bg-slate-900/90 text-slate-400 border-slate-800 hover:text-cyan-400 hover:border-cyan-500/40"
@@ -270,9 +335,13 @@ export default function RoverController() {
 
             {/* Backward Button */}
             <button
-              onClick={() => sendRoverCommand("move", "backward")}
+              onMouseDown={() => handleButtonPress("backward", "s")}
+              onMouseUp={() => handleButtonRelease("s")}
+              onMouseLeave={() => handleButtonRelease("s")}
+              onTouchStart={() => handleButtonPress("backward", "s")}
+              onTouchEnd={() => handleButtonRelease("s")}
               className={cn(
-                "absolute bottom-2 w-10 h-10 rounded border flex items-center justify-center transition-all cursor-pointer",
+                "absolute bottom-2 w-10 h-10 rounded border flex items-center justify-center transition-all cursor-pointer select-none touch-none",
                 activeKeys.s
                   ? "bg-cyan-500 text-white border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.6)]"
                   : "bg-slate-900/90 text-slate-400 border-slate-800 hover:text-cyan-400 hover:border-cyan-500/40"
@@ -307,10 +376,53 @@ export default function RoverController() {
           </div>
         </div>
 
+        {/* IMU Orientation (MPU9250 Integration) */}
+        {motherRover && (
+          <div className="border-t border-slate-900 pt-3 mt-2 space-y-2 select-none">
+            <span className="flex items-center gap-1.5 text-[9px] text-slate-450 font-bold uppercase tracking-widest">
+              <Compass className="h-3.5 w-3.5 text-cyan-400" />
+              MPU9250 IMU TELEMETRY
+            </span>
+            <div className="grid grid-cols-3 gap-2 bg-slate-950/60 p-2 rounded border border-slate-900/80 text-[9px] font-mono">
+              <div className="flex flex-col items-center justify-center border-r border-slate-900/80">
+                <span className="text-[7px] text-slate-500 font-bold uppercase">PITCH</span>
+                <span className="font-extrabold text-cyan-400 tracking-wide mt-0.5">
+                  {motherRover.pitch !== undefined ? `${Number(motherRover.pitch).toFixed(1)}°` : "0.0°"}
+                </span>
+              </div>
+              <div className="flex flex-col items-center justify-center border-r border-slate-900/80">
+                <span className="text-[7px] text-slate-500 font-bold uppercase">ROLL</span>
+                <span className="font-extrabold text-cyan-400 tracking-wide mt-0.5">
+                  {motherRover.roll !== undefined ? `${Number(motherRover.roll).toFixed(1)}°` : "0.0°"}
+                </span>
+              </div>
+              <div className="flex flex-col items-center justify-center">
+                <span className="text-[7px] text-slate-500 font-bold uppercase">YAW / HDG</span>
+                <span className="font-extrabold text-cyan-400 tracking-wide mt-0.5">
+                  {motherRover.heading !== undefined ? `${Number(motherRover.heading).toFixed(1)}°` : "0.0°"}
+                </span>
+              </div>
+            </div>
+            {/* Attitude horizon indicator */}
+            <div className="h-10 bg-slate-950/90 rounded border border-slate-900/80 overflow-hidden relative flex items-center justify-center">
+              <div 
+                className="absolute w-full h-[1.5px] bg-cyan-500/40 shadow-[0_0_8px_rgba(6,182,212,0.5)] transition-all duration-100 ease-out"
+                style={{
+                  transform: `rotate(${motherRover.roll || 0}deg) translateY(${(motherRover.pitch || 0) * 0.4}px)`
+                }}
+              />
+              <div className="absolute h-full w-[1.5px] bg-slate-800/40" />
+              <div className="absolute w-2.5 h-2.5 rounded-full border border-cyan-400/60 pointer-events-none flex items-center justify-center">
+                <div className="w-0.5 h-0.5 bg-cyan-400 rounded-full" />
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Help tooltip */}
         <div className="text-[7.5px] text-slate-500 leading-normal border-t border-slate-900 pt-2 flex items-center gap-1.5">
           <Radio className="h-3 w-3 text-amber-500/80 shrink-0" />
-          <span>Use WASD keys on your keyboard for drive controls. SPACEBAR triggers deceleration brake.</span>
+          <span>Hold WASD keys or click D-Pad buttons to move. Releasing stops the rover.</span>
         </div>
       </div>
     </div>

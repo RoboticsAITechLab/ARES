@@ -10,22 +10,24 @@ typedef void (*CommandCallback)(const RoverCommand&);
 
 class WebsocketClient {
 public:
-    WebsocketClient(const char* host, uint16_t port, const char* path);
+    WebsocketClient(const char* host, uint16_t port, const String& path);
     
     void begin(CommandCallback callback);
     void update();
+    void setPath(const String& path) { m_path = path; }
     
     // Send telemetry to the server
     void sendTelemetry(const String& payload);
+
+    static WebsocketClient* s_instance;
 
 private:
     WebSocketsClient m_webSocket;
     const char* m_host;
     uint16_t m_port;
-    const char* m_path;
+    String m_path;
     CommandCallback m_commandCallback;
 
-    static WebsocketClient* s_instance;
     static void webSocketEvent(WStype_t type, uint8_t * payload, size_t length);
 };
 

@@ -97,6 +97,13 @@ export class AresWebSocketClient {
       case "fleet_update":
         useMissionStore.getState().updateFleet(message.data);
         break;
+      case "rover_log":
+      case "command_ack":
+      case "ota_status":
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent(message.type, { detail: message }));
+        }
+        break;
       default:
         console.warn("[ARES WS Client] Unhandled message type:", message);
     }

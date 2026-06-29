@@ -8,19 +8,39 @@ generator client {
 }
 
 model Rover {
-  id           String      @id
-  name         String
-  type         String      // "mother" | "scout"
-  status       String      // "IDLE", "READY", etc.
-  battery      Float       @default(0.0)
-  signal       Int         @default(0)
-  temperature  Float       @default(0.0)
-  latitude     Float       @default(0.0)
-  longitude    Float       @default(0.0)
-  speed        Float       @default(0.0)
-  lastContact  DateTime    @default(now())
-  registeredAt DateTime    @default(now())
-  telemetries  Telemetry[]
+  id                 String      @id
+  name               String
+  type               String      // "mother" | "scout"
+  status             String      // "IDLE", "READY", etc.
+  battery            Float       @default(0.0)
+  signal             Int         @default(0)
+  temperature        Float       @default(0.0)
+  latitude           Float       @default(0.0)
+  longitude          Float       @default(0.0)
+  speed              Float       @default(0.0)
+  lastContact        DateTime    @default(now())
+  registeredAt       DateTime    @default(now())
+  telemetries        Telemetry[]
+
+  // Hardened OTA Fields
+  firmwareVersion    String      @default("1.0.0")
+  targetVersion      String?
+  updateChannel      String      @default("stable") // stable | beta | development
+  deviceSecret       String      @default("unique-secret")
+  apiKey             String      @default("generated-key")
+
+  // Safe Mode & Recovery Fields
+  bootReason         String      @default("poweron")
+  lastCrash          String?
+  rollbackCount      Int         @default(0)
+  otaStatus          String      @default("idle")
+  safeMode           Boolean     @default(false)
+  group              String      @default("default")
+  healthState        String      @default("healthy") // healthy | warning | critical | offline
+
+  // Staged / Scheduled Windows
+  updateWindow       String      @default("02:00")
+  allowMissionUpdate Boolean     @default(false)
 }
 
 model Telemetry {
@@ -50,7 +70,17 @@ model FirmwareRelease {
   id          Int      @id @default(autoincrement())
   version     String   @unique
   checksum    String
+  signature   String   @default("") // Cryptographic signature
   filePath    String
   uploadedAt  DateTime @default(now())
   description String?
+  channel     String   @default("stable") // "stable" | "beta" | "development"
+}
+
+model RoverEvent {
+  id        Int      @id @default(autoincrement())
+  roverId   String
+  eventType String   // e.g. "OTA Started", "Safe Mode Entry"
+  message   String
+  timestamp DateTime @default(now())
 }

@@ -53,7 +53,8 @@ export default function Sidebar() {
   const links = [
     { name: "Mission Control", path: "/mission-control", icon: "LayoutDashboard" },
     { name: "Live Map", path: "/map", icon: "Map" },
-    { name: "Telemetry", path: "/telemetry", icon: "Activity" }
+    { name: "Telemetry", path: "/telemetry", icon: "Activity" },
+    { name: "OTA Control", path: "/ota", icon: "Cpu" }
   ];
 
   const motherRover = fleet.mother;

@@ -15,5 +15,8 @@ export interface MotherRoverPacket {
   status: "online" | "offline";
   connectedScouts: number;
   timestamp: number;
+  pitch?: number;
+  roll?: number;
+  obstacleDistance?: number;
 }
 

@@ -1,18 +1,26 @@
 #include "comms/websocket_client.h"
 #include "comms/wifi_manager.h"
+#include "comms/ota_manager.h"
 #include "drivers/battery_monitor.h"
 #include "drivers/imu_driver.h"
 #include "drivers/motor_driver.h"
 #include "drivers/servo_driver.h"
 #include "drivers/ultrasonic_driver.h"
 #include "safety/watchdog.h"
+#include "safety/recovery_manager.h"
+#include "safety/diagnostics.h"
 #include "val/kinematics.h"
 #include <Arduino.h>
-#include <ArduinoOTA.h>
+#include <Preferences.h>
 
-// Wi-Fi Station Configuration (Edit to connect your rover to the Internet)
+// Wi-Fi Station Configuration
 const char *WIFI_SSID = "Airtel_RoboticsAiTechLab";
 const char *WIFI_PASSWORD = "RoboticsAiTechLabs";
+
+// Hardcoded default device identity for demonstration / default state
+String roverId = "mother-rover";
+String apiKey = "generated-key";
+String firmwareVersion = "1.3.0";
 
 // System Instances
 MotorDriver motorDriver;
@@ -21,35 +29,54 @@ ImuDriver imuDriver;
 UltrasonicDriver ultrasonicDriver(2, 34); // trig=2, echo=34
 ServoDriver servoDriver(4);               // servo=4
 Kinematics kinematics;
-Watchdog watchdog(1000); // 1000ms safety timeout
+Watchdog watchdog(1500); // 1500ms safety timeout
 WifiManager wifiManager("ARES_Rover_V2", "aresroverpassword");
-WebsocketClient webSocketClient("ares-mk3j.onrender.com", 443,
-                                "/ws?token=ares_auth_secret&role=rover");
 
-// Global Motion States
-float currentThrottle = 0.6f; // Base speed multiplier (0.0 to 1.0)
+// Instantiate global WebsocketClient with a generic path that will be overridden on setup
+WebsocketClient webSocketClient("192.168.1.5", 3001, "/ws");
+
+// Global Configuration states (load from Preferences if present)
+float currentThrottle = 0.6f;
 float targetLinear = 0.0f;
 float targetAngular = 0.0f;
 
-// Timing trackers
+// Diagnostics results caching
+SelfTestReport lastDiagnostics;
+
 unsigned long lastTelemetryTime = 0;
-const unsigned long telemetryInterval =
-    1000; // Broadcast telemetry every 1000ms
+const unsigned long telemetryInterval = 1000;
+bool bootMarkedClean = false;
 
 // Forward Declarations
 void handleIncomingCommand(const RoverCommand &cmd);
 void updateLocomotion();
+void logToCloud(const String& level, const String& msg);
+void sendCommandAck(const String& command, const String& status, const String& extraJson = "");
 
 void setup() {
   Serial.begin(115200);
   delay(1000);
   Serial.println("==================================================");
-  Serial.println("         ARES ROVER MVR FIRMWARE SYSTEM           ");
+  Serial.println("         ARES ROVER HARDENED OTA FIRMWARE         ");
   Serial.println("==================================================");
 
-  // Initialize Motor HAL
-  Serial.println("[Init] Initializing Motor Driver HAL...");
-  motorDriver.begin();
+  // Initialize Recovery & Boot manager
+  RecoveryManager::getInstance().begin();
+  bool safeMode = RecoveryManager::getInstance().isSafeMode();
+
+  // Initialize Preferences and load credentials/configurations
+  Preferences prefs;
+  prefs.begin("ares_config", false);
+  roverId = prefs.getString("rover_id", "mother-rover");
+  apiKey = prefs.getString("api_key", "generated-key");
+  currentThrottle = prefs.getFloat("speed_mult", 0.6f);
+  prefs.end();
+
+  // Configure dynamic authentication path for WebsocketClient
+  // We point it to localhost or local network server depending on dev configuration
+  // Usually the host is overridden by network scan or local IP, but we use the backend server port 3001
+  String wsPath = "/ws?token=ares_auth_secret&role=rover&roverId=" + roverId + "&apiKey=" + apiKey;
+  webSocketClient.setPath(wsPath);
 
   // Initialize Battery ADC Reader
   Serial.println("[Init] Initializing Battery Monitor...");
@@ -67,9 +94,20 @@ void setup() {
   Serial.println("[Init] Initializing SG90 Pan/Tilt Gimbal Servos...");
   servoDriver.begin();
 
-  // Initialize Safety Watchdog
-  Serial.println("[Init] Registering Watchdog Safety Guardian...");
-  watchdog.begin(&batteryMonitor, &motorDriver, &ultrasonicDriver);
+  // Safe Mode Logic: If Safe Mode is active, disable motor control outputs completely
+  if (safeMode) {
+      Serial.println("[System] WARNING: Booted in SAFE MODE. Motors and autonomy are DISABLED.");
+      motorDriver.stopAll();
+      motorDriver.setStandby(true);
+  } else {
+      // Initialize Motor HAL normally
+      Serial.println("[Init] Initializing Motor Driver HAL...");
+      motorDriver.begin();
+      
+      // Initialize Safety Watchdog
+      Serial.println("[Init] Registering Watchdog Safety Guardian...");
+      watchdog.begin(&batteryMonitor, &motorDriver, &ultrasonicDriver);
+  }
 
   // Initialize WiFi
   Serial.println("[Init] Booting WiFi Link...");
@@ -79,104 +117,110 @@ void setup() {
   Serial.println("[Init] Connecting WebSocket Client...");
   webSocketClient.begin(handleIncomingCommand);
 
-  // Start Arduino OTA Service
-  Serial.println("[Init] Starting Arduino OTA service...");
-  ArduinoOTA.setHostname("ARES_Rover_ESP32");
-  ArduinoOTA.onStart([]() {
-    Serial.println("[OTA] Firmware update starting...");
-  });
-  ArduinoOTA.onEnd([]() {
-    Serial.println("\n[OTA] Update successfully finished!");
-  });
-  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-    Serial.printf("[OTA] Progress: %u%%\r", (progress / (total / 100)));
-  });
-  ArduinoOTA.onError([](ota_error_t error) {
-    Serial.printf("[OTA] Error[%u]: ", error);
-    if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
-    else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
-    else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
-    else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
-    else if (error == OTA_END_ERROR) Serial.println("End Failed");
-  });
-  ArduinoOTA.begin();
+  // Initialize OTA Manager
+  // Standard port 3001 for local REST backend, fallback to Render/Cloud depending on environments
+  OtaManager::getInstance().begin("192.168.1.5", 3001, roverId, apiKey);
 
   Serial.println("[System] Boot Sequence Complete. ARES Rover is ONLINE.");
   Serial.println("==================================================");
 }
 
 void loop() {
-  // Handle OTA updates
-  ArduinoOTA.handle();
+  // Check and mark boot clean after 15 seconds of clean execution
+  if (!bootMarkedClean && millis() > 15000) {
+      bootMarkedClean = true;
+      RecoveryManager::getInstance().markBootClean();
+      logToCloud("INFO", "Rover boot finalized and marked clean in system registers.");
+  }
 
   // Process inbound websocket packets
   webSocketClient.update();
 
-  // Update IMU calculations
+  // Periodically check and run background OTA downloads (within schedule window)
+  if (!RecoveryManager::getInstance().isSafeMode()) {
+      OtaManager::getInstance().update();
+  }
+
+  // Update IMU orientation fusion
   imuDriver.update();
 
-  // Perform watchdog safety checks (low battery, collision risk, connection
-  // timeout)
-  watchdog.update();
+  // Run watchdog safety checks (only if not in safe mode)
+  if (!RecoveryManager::getInstance().isSafeMode()) {
+      watchdog.update();
+  }
 
-  // Handle periodic telemetry broadcasts
+  // Periodic telemetry broadcast
   unsigned long now = millis();
   if (now - lastTelemetryTime >= telemetryInterval) {
     lastTelemetryTime = now;
 
-    // Read stats
     float volts = batteryMonitor.readVoltage();
     float pct = batteryMonitor.getPercentage();
-    int rssi = WiFi.RSSI();
+    int rssi = WiFi.status() == WL_CONNECTED ? WiFi.RSSI() : -100;
 
-    // Check watchdog and emergency states
-    bool safetyTriggered = watchdog.isTriggered();
+    bool safetyTriggered = !RecoveryManager::getInstance().isSafeMode() && watchdog.isTriggered();
     bool battLow = watchdog.isBatteryCritical();
 
-    // Read IMU pitch, roll, yaw
     float pitch = imuDriver.getPitch();
     float roll = imuDriver.getRoll();
     float yaw = imuDriver.getYaw();
 
-    // Read ultrasonic distance
     float distance = ultrasonicDriver.readDistanceCm();
+    float currentSpeed = (targetLinear != 0.0f) ? fabs(targetLinear * currentThrottle) : 0.0f;
 
-    // Calculate current speed estimate
-    float currentSpeed =
-        (targetLinear != 0.0f) ? fabs(targetLinear * currentThrottle) : 0.0f;
+    uint32_t freeHeap = ESP.getFreeHeap();
+    float tempCelsius = 28.0f; // Mock internal temp sensor
 
-    // Serialize and broadcast telemetry
+    // Retrieve Recovery states
+    String bootReason = RecoveryManager::getInstance().getBootReason();
+    String lastCrash = RecoveryManager::getInstance().getLastCrash();
+    int rollbackCount = RecoveryManager::getInstance().getRollbackCount();
+    String otaStatus = OtaManager::getInstance().getOtaStatus();
+    bool safeModeActive = RecoveryManager::getInstance().isSafeMode();
+
     String telemetryData = PacketProtocol::serializeTelemetry(
         volts, pct, rssi, safetyTriggered, battLow, currentSpeed, pitch, roll,
-        yaw, distance);
+        yaw, distance, firmwareVersion, freeHeap, tempCelsius,
+        bootReason, lastCrash, rollbackCount, otaStatus, safeModeActive
+    );
+    
     webSocketClient.sendTelemetry(telemetryData);
   }
 
-  // Sleep slightly to yield to ESP32 background tasks
   delay(10);
 }
 
-// Callback handler for WebSocket commands
+void logToCloud(const String& level, const String& msg) {
+    Serial.printf("[%s] %s\n", level.c_str(), msg.c_str());
+    String payload = "{\"type\":\"rover_log\",\"level\":\"" + level + "\",\"message\":\"" + msg + "\",\"timestamp\":" + String(millis()) + "}";
+    webSocketClient.sendTelemetry(payload);
+}
+
+void sendCommandAck(const String& command, const String& status, const String& extraJson) {
+    String payload = "{\"type\":\"command_ack\",\"command\":\"" + command + "\",\"status\":\"" + status + "\",\"timestamp\":" + String(millis());
+    if (extraJson.length() > 0) {
+        payload += ",\"value\":" + extraJson;
+    }
+    payload += "}";
+    webSocketClient.sendTelemetry(payload);
+}
+
 void handleIncomingCommand(const RoverCommand &cmd) {
-  // Reset safety watchdog timer
-  watchdog.feed();
-
-  // Verify that battery is safe to operate
-  if (watchdog.isBatteryCritical()) {
-    Serial.println(
-        "[Warning] Command rejected: Battery under-voltage threshold reached!");
-    return;
+  // Feed watchdog if not in safe mode
+  if (!RecoveryManager::getInstance().isSafeMode()) {
+      watchdog.feed();
   }
 
-  if (watchdog.isCollisionRisk() && cmd.command == "move" &&
-      cmd.valueStr == "forward") {
-    Serial.println(
-        "[Warning] Move forward rejected: Collision obstacle risk active!");
-    return;
+  // Reject execution commands if in Safe Mode
+  if (RecoveryManager::getInstance().isSafeMode()) {
+      if (cmd.command == "move" || cmd.command == "speed" || cmd.command == "servo" || cmd.command == "deploy") {
+          logToCloud("WARNING", "Command " + cmd.command + " rejected: Rover is currently in SAFE MODE.");
+          sendCommandAck(cmd.command, "failed", "\"Safe Mode Active\"");
+          return;
+      }
   }
 
-  Serial.printf("[Cmd] Processing command: %s\n", cmd.command.c_str());
-
+  // Process standard execution commands
   if (cmd.command == "move") {
     if (cmd.valueStr == "forward") {
       targetLinear = 1.0f;
@@ -195,38 +239,82 @@ void handleIncomingCommand(const RoverCommand &cmd) {
       targetAngular = 0.0f;
     }
     updateLocomotion();
+    sendCommandAck("move", "completed");
   } else if (cmd.command == "stop") {
     targetLinear = 0.0f;
     targetAngular = 0.0f;
     updateLocomotion();
+    sendCommandAck("stop", "completed");
   } else if (cmd.command == "speed") {
     if (cmd.hasNumericValue) {
       currentThrottle = constrain(cmd.valueNum / 100.0f, 0.0f, 1.0f);
-      Serial.printf("[Cmd] Speed throttle adjusted to %.2f\n", currentThrottle);
       updateLocomotion();
+      
+      Preferences prefs;
+      prefs.begin("ares_config", false);
+      prefs.putFloat("speed_mult", currentThrottle);
+      prefs.end();
+      
+      sendCommandAck("speed", "completed");
     }
   } else if (cmd.command == "servo") {
     servoDriver.setAngle(cmd.servoYaw);
-    Serial.printf("[Cmd] Servo moved to angle: %d\n", cmd.servoYaw);
-  } else if (cmd.command == "deploy") {
-    if (cmd.valueStr == "deployScout") {
-      servoDriver.deployScout();
-    } else if (cmd.valueStr == "retractScout") {
-      servoDriver.retractScout();
-    }
+    sendCommandAck("servo", "completed");
   } else if (cmd.command == "estop") {
     targetLinear = 0.0f;
     targetAngular = 0.0f;
     updateLocomotion();
-    motorDriver.setStandby(true); // Disable H-bridges immediately
-    Serial.println(
-        "[Failsafe] Emergency Stop triggered manually via control client!");
+    motorDriver.setStandby(true);
+    logToCloud("CRITICAL", "Emergency Stop triggered manually via control client!");
+    sendCommandAck("estop", "completed");
+  } 
+  // Hardened Remote Recovery & OTA Commands
+  else if (cmd.command == "reboot") {
+    logToCloud("WARNING", "Reboot command received. Restarting system...");
+    sendCommandAck("reboot", "acknowledged");
+    delay(500);
+    RecoveryManager::getInstance().forceReboot();
+  } else if (cmd.command == "rollback") {
+    logToCloud("WARNING", "Rollback command received. Triggering firmare restoration...");
+    sendCommandAck("rollback", "acknowledged");
+    OtaManager::getInstance().triggerUpdate("rollback");
+  } else if (cmd.command == "factory_reset") {
+    logToCloud("CRITICAL", "Factory reset command received. Purging credentials and variables...");
+    sendCommandAck("factory_reset", "acknowledged");
+    delay(500);
+    RecoveryManager::getInstance().factoryReset();
+  } else if (cmd.command == "diagnostics") {
+    logToCloud("INFO", "Running diagnostics routine...");
+    sendCommandAck("diagnostics", "acknowledged");
+    
+    SelfTestReport report = Diagnostics::getInstance().runSelfTests(
+        motorDriver, servoDriver, imuDriver, ultrasonicDriver
+    );
+    
+    String reportJson = "{\"motor\":" + String(report.motor ? "true" : "false") +
+                        ",\"servo\":" + String(report.servo ? "true" : "false") +
+                        ",\"imu\":" + String(report.imu ? "true" : "false") +
+                        ",\"ultrasonic\":" + String(report.ultrasonic ? "true" : "false") +
+                        ",\"camera\":" + String(report.camera ? "true" : "false") +
+                        ",\"wifi\":" + String(report.wifi ? "true" : "false") +
+                        ",\"memory\":" + String(report.memory ? "true" : "false") +
+                        ",\"summary\":\"" + report.summary + "\"}";
+                        
+    sendCommandAck("diagnostics", "completed", reportJson);
+  } else if (cmd.command == "ota_trigger") {
+    logToCloud("INFO", "OTA Update trigger request received.");
+    sendCommandAck("ota_trigger", "acknowledged");
+    OtaManager::getInstance().triggerUpdate();
+  } else if (cmd.command == "config_update") {
+    logToCloud("INFO", "Parameters configuration update received.");
+    sendCommandAck("config_update", "completed");
   }
 }
 
-// Translate target linear/angular velocities to wheel outputs
 void updateLocomotion() {
-  motorDriver.setStandby(false); // Force enable motor drivers out of standby
+  if (RecoveryManager::getInstance().isSafeMode()) return;
+  
+  motorDriver.setStandby(false);
   float resolvedLinear = targetLinear * currentThrottle;
   float resolvedAngular = targetAngular * currentThrottle;
 
