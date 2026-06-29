@@ -2,7 +2,7 @@
 
 WebsocketClient* WebsocketClient::s_instance = nullptr;
 
-WebsocketClient::WebsocketClient(const char* host, uint16_t port, const String& path)
+WebsocketClient::WebsocketClient(const char* host, uint16_t port, const char* path)
     : m_host(host), m_port(port), m_path(path), m_commandCallback(nullptr) {
     s_instance = this;
 }
@@ -12,16 +12,16 @@ void WebsocketClient::begin(CommandCallback callback) {
     
     // Initialize WebSocket connection (Use SSL WSS protocol on port 443)
     if (m_port == 443) {
-        m_webSocket.beginSSL(m_host, m_port, m_path.c_str());
+        m_webSocket.beginSSL(m_host, m_port, m_path);
     } else {
-        m_webSocket.begin(m_host, m_port, m_path.c_str());
+        m_webSocket.begin(m_host, m_port, m_path);
     }
     m_webSocket.onEvent(webSocketEvent);
     
     // Reconnect after 5 seconds if connection is lost
     m_webSocket.setReconnectInterval(5000);
     
-    Serial.printf("[WS] Connecting to cloud gateway (SSL=%s): %s:%d%s\n", (m_port == 443 ? "Yes" : "No"), m_host, m_port, m_path.c_str());
+    Serial.printf("[WS] Connecting to cloud gateway (SSL=%s): %s:%d%s\n", (m_port == 443 ? "Yes" : "No"), m_host, m_port, m_path);
 }
 
 void WebsocketClient::update() {
@@ -51,7 +51,7 @@ void WebsocketClient::webSocketEvent(WStype_t type, uint8_t * payload, size_t le
             
             // Check for server ping
             if (length >= 13 && strstr((const char*)payload, "\"type\":\"ping\"") != nullptr) {
-                // Heartbeat ping, reply with pong (or do nothing as loop handles connection upkeep)
+                // Heartbeat ping, no action needed or reply with pong
                 break;
             }
 

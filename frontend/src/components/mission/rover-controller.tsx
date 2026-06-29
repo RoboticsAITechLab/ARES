@@ -266,12 +266,14 @@ export default function RoverController() {
             <div className="absolute inset-0 rounded-full border border-dashed border-cyan-500/10 pointer-events-none"></div>
             
             {/* Forward Button */}
+            {/* Forward Button */}
             <button
               onMouseDown={() => handleButtonPress("forward", "w")}
               onMouseUp={() => handleButtonRelease("w")}
               onMouseLeave={() => handleButtonRelease("w")}
               onTouchStart={() => handleButtonPress("forward", "w")}
               onTouchEnd={() => handleButtonRelease("w")}
+              onTouchCancel={() => handleButtonRelease("w")}
               className={cn(
                 "absolute top-2 w-10 h-10 rounded border flex items-center justify-center transition-all cursor-pointer select-none touch-none",
                 activeKeys.w
@@ -290,6 +292,7 @@ export default function RoverController() {
               onMouseLeave={() => handleButtonRelease("a")}
               onTouchStart={() => handleButtonPress("left", "a")}
               onTouchEnd={() => handleButtonRelease("a")}
+              onTouchCancel={() => handleButtonRelease("a")}
               className={cn(
                 "absolute left-2 w-10 h-10 rounded border flex items-center justify-center transition-all cursor-pointer select-none touch-none",
                 activeKeys.a
@@ -322,6 +325,7 @@ export default function RoverController() {
               onMouseLeave={() => handleButtonRelease("d")}
               onTouchStart={() => handleButtonPress("right", "d")}
               onTouchEnd={() => handleButtonRelease("d")}
+              onTouchCancel={() => handleButtonRelease("d")}
               className={cn(
                 "absolute right-2 w-10 h-10 rounded border flex items-center justify-center transition-all cursor-pointer select-none touch-none",
                 activeKeys.d
@@ -340,6 +344,7 @@ export default function RoverController() {
               onMouseLeave={() => handleButtonRelease("s")}
               onTouchStart={() => handleButtonPress("backward", "s")}
               onTouchEnd={() => handleButtonRelease("s")}
+              onTouchCancel={() => handleButtonRelease("s")}
               className={cn(
                 "absolute bottom-2 w-10 h-10 rounded border flex items-center justify-center transition-all cursor-pointer select-none touch-none",
                 activeKeys.s
