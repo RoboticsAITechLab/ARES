@@ -6,6 +6,10 @@ import {
   ArrowDown, 
   ArrowLeft, 
   ArrowRight, 
+  ArrowUpLeft,
+  ArrowUpRight,
+  ArrowDownLeft,
+  ArrowDownRight,
   Square, 
   Gauge, 
   Radio, 
@@ -34,6 +38,10 @@ export default function RoverController() {
     a: false,
     s: false,
     d: false,
+    wl: false,
+    wr: false,
+    sl: false,
+    sr: false,
     Space: false
   });
 
@@ -265,8 +273,7 @@ export default function RoverController() {
             {/* Compass Heading Indicator Lines */}
             <div className="absolute inset-0 rounded-full border border-dashed border-cyan-500/10 pointer-events-none"></div>
             
-            {/* Forward Button */}
-            {/* Forward Button */}
+             {/* Forward Button */}
             <button
               onMouseDown={() => handleButtonPress("forward", "w")}
               onMouseUp={() => handleButtonRelease("w")}
@@ -275,7 +282,7 @@ export default function RoverController() {
               onTouchEnd={() => handleButtonRelease("w")}
               onTouchCancel={() => handleButtonRelease("w")}
               className={cn(
-                "absolute top-2 w-10 h-10 rounded border flex items-center justify-center transition-all cursor-pointer select-none touch-none",
+                "absolute top-1 w-9 h-9 rounded border flex items-center justify-center transition-all cursor-pointer select-none touch-none z-10",
                 activeKeys.w
                   ? "bg-cyan-500 text-white border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.6)]"
                   : "bg-slate-900/90 text-slate-400 border-slate-800 hover:text-cyan-400 hover:border-cyan-500/40"
@@ -283,6 +290,44 @@ export default function RoverController() {
               title="Move Forward (W / Up Arrow)"
             >
               <ArrowUp className="h-4 w-4" />
+            </button>
+
+            {/* Top Left (Forward Left) */}
+            <button
+              onMouseDown={() => handleButtonPress("forward-left", "wl")}
+              onMouseUp={() => handleButtonRelease("wl")}
+              onMouseLeave={() => handleButtonRelease("wl")}
+              onTouchStart={() => handleButtonPress("forward-left", "wl")}
+              onTouchEnd={() => handleButtonRelease("wl")}
+              onTouchCancel={() => handleButtonRelease("wl")}
+              className={cn(
+                "absolute top-5 left-5 w-8 h-8 rounded border flex items-center justify-center transition-all cursor-pointer select-none touch-none z-10",
+                activeKeys.wl
+                  ? "bg-cyan-500 text-white border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.6)]"
+                  : "bg-slate-900/90 text-slate-400 border-slate-800 hover:text-cyan-400 hover:border-cyan-500/40"
+              )}
+              title="Forward Left"
+            >
+              <ArrowUpLeft className="h-3.5 w-3.5" />
+            </button>
+
+            {/* Top Right (Forward Right) */}
+            <button
+              onMouseDown={() => handleButtonPress("forward-right", "wr")}
+              onMouseUp={() => handleButtonRelease("wr")}
+              onMouseLeave={() => handleButtonRelease("wr")}
+              onTouchStart={() => handleButtonPress("forward-right", "wr")}
+              onTouchEnd={() => handleButtonRelease("wr")}
+              onTouchCancel={() => handleButtonRelease("wr")}
+              className={cn(
+                "absolute top-5 right-5 w-8 h-8 rounded border flex items-center justify-center transition-all cursor-pointer select-none touch-none z-10",
+                activeKeys.wr
+                  ? "bg-cyan-500 text-white border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.6)]"
+                  : "bg-slate-900/90 text-slate-400 border-slate-800 hover:text-cyan-400 hover:border-cyan-500/40"
+              )}
+              title="Forward Right"
+            >
+              <ArrowUpRight className="h-3.5 w-3.5" />
             </button>
 
             {/* Turn Left Button */}
@@ -294,7 +339,7 @@ export default function RoverController() {
               onTouchEnd={() => handleButtonRelease("a")}
               onTouchCancel={() => handleButtonRelease("a")}
               className={cn(
-                "absolute left-2 w-10 h-10 rounded border flex items-center justify-center transition-all cursor-pointer select-none touch-none",
+                "absolute left-1 w-9 h-9 rounded border flex items-center justify-center transition-all cursor-pointer select-none touch-none z-10",
                 activeKeys.a
                   ? "bg-cyan-500 text-white border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.6)]"
                   : "bg-slate-900/90 text-slate-400 border-slate-800 hover:text-cyan-400 hover:border-cyan-500/40"
@@ -308,7 +353,7 @@ export default function RoverController() {
             <button
               onClick={() => sendRoverCommand("stop")}
               className={cn(
-                "w-12 h-12 rounded-full border flex flex-col items-center justify-center transition-all cursor-pointer font-black text-[9px] tracking-wide select-none",
+                "w-12 h-12 rounded-full border flex flex-col items-center justify-center transition-all cursor-pointer font-black text-[9px] tracking-wide select-none z-20",
                 activeKeys.Space
                   ? "bg-rose-600 text-white border-rose-500 shadow-[0_0_12px_rgba(239,68,68,0.7)]"
                   : "bg-slate-900 text-rose-500 border-rose-950/60 hover:bg-rose-950/20 hover:border-rose-600"
@@ -327,7 +372,7 @@ export default function RoverController() {
               onTouchEnd={() => handleButtonRelease("d")}
               onTouchCancel={() => handleButtonRelease("d")}
               className={cn(
-                "absolute right-2 w-10 h-10 rounded border flex items-center justify-center transition-all cursor-pointer select-none touch-none",
+                "absolute right-1 w-9 h-9 rounded border flex items-center justify-center transition-all cursor-pointer select-none touch-none z-10",
                 activeKeys.d
                   ? "bg-cyan-500 text-white border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.6)]"
                   : "bg-slate-900/90 text-slate-400 border-slate-800 hover:text-cyan-400 hover:border-cyan-500/40"
@@ -335,6 +380,44 @@ export default function RoverController() {
               title="Turn Right (D / Right Arrow)"
             >
               <ArrowRight className="h-4 w-4" />
+            </button>
+
+            {/* Bottom Left (Backward Left) */}
+            <button
+              onMouseDown={() => handleButtonPress("backward-left", "sl")}
+              onMouseUp={() => handleButtonRelease("sl")}
+              onMouseLeave={() => handleButtonRelease("sl")}
+              onTouchStart={() => handleButtonPress("backward-left", "sl")}
+              onTouchEnd={() => handleButtonRelease("sl")}
+              onTouchCancel={() => handleButtonRelease("sl")}
+              className={cn(
+                "absolute bottom-5 left-5 w-8 h-8 rounded border flex items-center justify-center transition-all cursor-pointer select-none touch-none z-10",
+                activeKeys.sl
+                  ? "bg-cyan-500 text-white border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.6)]"
+                  : "bg-slate-900/90 text-slate-400 border-slate-800 hover:text-cyan-400 hover:border-cyan-500/40"
+              )}
+              title="Backward Left"
+            >
+              <ArrowDownLeft className="h-3.5 w-3.5" />
+            </button>
+
+            {/* Bottom Right (Backward Right) */}
+            <button
+              onMouseDown={() => handleButtonPress("backward-right", "sr")}
+              onMouseUp={() => handleButtonRelease("sr")}
+              onMouseLeave={() => handleButtonRelease("sr")}
+              onTouchStart={() => handleButtonPress("backward-right", "sr")}
+              onTouchEnd={() => handleButtonRelease("sr")}
+              onTouchCancel={() => handleButtonRelease("sr")}
+              className={cn(
+                "absolute bottom-5 right-5 w-8 h-8 rounded border flex items-center justify-center transition-all cursor-pointer select-none touch-none z-10",
+                activeKeys.sr
+                  ? "bg-cyan-500 text-white border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.6)]"
+                  : "bg-slate-900/90 text-slate-400 border-slate-800 hover:text-cyan-400 hover:border-cyan-500/40"
+              )}
+              title="Backward Right"
+            >
+              <ArrowDownRight className="h-3.5 w-3.5" />
             </button>
 
             {/* Backward Button */}
@@ -346,7 +429,7 @@ export default function RoverController() {
               onTouchEnd={() => handleButtonRelease("s")}
               onTouchCancel={() => handleButtonRelease("s")}
               className={cn(
-                "absolute bottom-2 w-10 h-10 rounded border flex items-center justify-center transition-all cursor-pointer select-none touch-none",
+                "absolute bottom-1 w-9 h-9 rounded border flex items-center justify-center transition-all cursor-pointer select-none touch-none z-10",
                 activeKeys.s
                   ? "bg-cyan-500 text-white border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.6)]"
                   : "bg-slate-900/90 text-slate-400 border-slate-800 hover:text-cyan-400 hover:border-cyan-500/40"

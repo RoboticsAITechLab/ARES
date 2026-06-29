@@ -23,7 +23,7 @@ ServoDriver servoDriver(4);               // servo=4
 Kinematics kinematics;
 Watchdog watchdog(1000); // 1000ms safety timeout
 WifiManager wifiManager("ARES_Rover_V2", "aresroverpassword");
-WebsocketClient webSocketClient("192.168.1.5", 3001,
+WebsocketClient webSocketClient("ares-mk3j.onrender.com", 443,
                                 "/ws?token=ares_auth_secret&role=rover");
 
 // Global Motion States
