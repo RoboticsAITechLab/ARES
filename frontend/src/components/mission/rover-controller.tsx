@@ -31,6 +31,7 @@ export default function RoverController() {
   const [speed, setSpeed] = useState<number>(0.5);
   const [lastCommand, setLastCommand] = useState<string>("NONE");
   const [isKeyboardActive, setIsKeyboardActive] = useState<boolean>(true);
+  const [isContinuous, setIsContinuous] = useState<boolean>(false);
 
   // Tracks active key presses for visual feedback
   const [activeKeys, setActiveKeys] = useState<{ [key: string]: boolean }>({
@@ -75,16 +76,25 @@ export default function RoverController() {
       
       let logDesc = "";
       if (command === "move") {
-        logDesc = `Manual vector drive: MOVE ${String(value).toUpperCase()} at base velocity`;
+        logDesc = `Manual vector drive directive: ${command.toUpperCase()}${value ? ` (${value})` : ""}`;
       } else if (command === "stop") {
         logDesc = `Manual vector drive: STOP / DE-ACCELERATE`;
       } else if (command === "speed") {
-        logDesc = `Manual speed throttle set to ${value} m/s`;
+        logDesc = `Manual speed throttle set to ${value}%`;
       }
 
       setLastCommand(`${command.toUpperCase()}${value ? ` (${value})` : ""}`);
       addLog("Rover Controller", "COMMS", "INFO", logDesc);
     }
+  };
+
+  const handleStop = () => {
+    setActiveKeys({ w: false, a: false, s: false, d: false, wl: false, wr: false, sl: false, sr: false, Space: true });
+    lastSentCommandRef.current = "stop";
+    sendRoverCommand("stop");
+    setTimeout(() => {
+      setActiveKeys(prev => ({ ...prev, Space: false }));
+    }, 200);
   };
 
   const updateMovement = () => {
@@ -116,7 +126,7 @@ export default function RoverController() {
         sendRoverCommand("move", nextDir);
       }
     } else {
-      if (lastSentCommandRef.current !== "stop") {
+      if (lastSentCommandRef.current !== "stop" && !isContinuous) {
         lastSentCommandRef.current = "stop";
         sendRoverCommand("stop");
       }
@@ -135,11 +145,7 @@ export default function RoverController() {
         if (key === " " || e.code === "Space") {
           if (!pressedKeysRef.current.has("space")) {
             pressedKeysRef.current.add("space");
-            setActiveKeys(prev => ({ ...prev, Space: true }));
-            if (lastSentCommandRef.current !== "stop") {
-              lastSentCommandRef.current = "stop";
-              sendRoverCommand("stop");
-            }
+            handleStop();
           }
           return;
         }
@@ -150,7 +156,14 @@ export default function RoverController() {
 
         if (!pressedKeysRef.current.has(key)) {
           pressedKeysRef.current.add(key);
-          setActiveKeys(prev => ({ ...prev, [mapKey]: true }));
+          if (isContinuous) {
+            setActiveKeys({
+              w: false, a: false, s: false, d: false, wl: false, wr: false, sl: false, sr: false, Space: false,
+              [mapKey]: true
+            });
+          } else {
+            setActiveKeys(prev => ({ ...prev, [mapKey]: true }));
+          }
           updateMovement();
         }
       }
@@ -172,8 +185,10 @@ export default function RoverController() {
                        ["arrowleft", "a"].includes(key) ? "a" : "d";
 
         pressedKeysRef.current.delete(key);
-        setActiveKeys(prev => ({ ...prev, [mapKey]: false }));
-        updateMovement();
+        if (!isContinuous) {
+          setActiveKeys(prev => ({ ...prev, [mapKey]: false }));
+          updateMovement();
+        }
       }
     };
 
@@ -192,17 +207,28 @@ export default function RoverController() {
   const handleSpeedChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const targetSpeed = parseFloat(e.target.value);
     setSpeed(targetSpeed);
-    sendRoverCommand("speed", targetSpeed);
+    // Map 0.0 - 2.0 to 0 - 100 percentage for the ESP32 firmware
+    const percentage = Math.round((targetSpeed / 2.0) * 100);
+    sendRoverCommand("speed", percentage);
   };
 
   const handleButtonPress = (dir: string, mapKey: string) => {
-    setActiveKeys(prev => ({ ...prev, [mapKey]: true }));
+    if (isContinuous) {
+      setActiveKeys({
+        w: false, a: false, s: false, d: false, wl: false, wr: false, sl: false, sr: false, Space: false,
+        [mapKey]: true
+      });
+    } else {
+      setActiveKeys(prev => ({ ...prev, [mapKey]: true }));
+    }
     sendRoverCommand("move", dir);
   };
 
   const handleButtonRelease = (mapKey: string) => {
-    setActiveKeys(prev => ({ ...prev, [mapKey]: false }));
-    sendRoverCommand("stop");
+    if (!isContinuous) {
+      setActiveKeys(prev => ({ ...prev, [mapKey]: false }));
+      sendRoverCommand("stop");
+    }
   };
 
   return (
@@ -239,11 +265,30 @@ export default function RoverController() {
               "text-[8px] h-5 px-2 font-bold rounded border uppercase tracking-wider flex items-center gap-1",
               isKeyboardActive 
                 ? "border-amber-500/30 bg-amber-950/20 text-amber-400" 
-                : "border-slate-800 bg-slate-955 text-slate-500"
+                : "border-slate-800 bg-slate-950 text-slate-500"
             )}
           >
             <Keyboard className="h-2.5 w-2.5" />
             <span>{isKeyboardActive ? "KEY_ON" : "KEY_OFF"}</span>
+          </Button>
+
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              setIsContinuous(!isContinuous);
+              handleStop();
+            }}
+            title="Toggle Continuous/Momentary Drive Mode"
+            className={cn(
+              "text-[8px] h-5 px-2 font-bold rounded border uppercase tracking-wider flex items-center gap-1",
+              isContinuous 
+                ? "border-purple-500/30 bg-purple-950/20 text-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.4)]" 
+                : "border-slate-800 bg-slate-950 text-slate-500"
+            )}
+          >
+            <Radio className="h-2.5 w-2.5" />
+            <span>{isContinuous ? "CONT_MODE" : "HOLD_MODE"}</span>
           </Button>
         </div>
       </div>
@@ -351,7 +396,7 @@ export default function RoverController() {
 
             {/* STOP / BRAKE Button (Center) */}
             <button
-              onClick={() => sendRoverCommand("stop")}
+              onClick={handleStop}
               className={cn(
                 "w-12 h-12 rounded-full border flex flex-col items-center justify-center transition-all cursor-pointer font-black text-[9px] tracking-wide select-none z-20",
                 activeKeys.Space
