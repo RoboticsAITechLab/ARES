@@ -54,6 +54,7 @@ export default function Sidebar() {
     { name: "Mission Control", path: "/mission-control", icon: "LayoutDashboard" },
     { name: "Live Map", path: "/map", icon: "Map" },
     { name: "Telemetry", path: "/telemetry", icon: "Activity" },
+    { name: "Scout Ops", path: "/scouts", icon: "Radio" },
     { name: "OTA Control", path: "/ota", icon: "Cpu" }
   ];
 
