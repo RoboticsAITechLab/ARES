@@ -223,24 +223,46 @@ export const useMissionStore = create<MissionStoreState>((set) => ({
     };
   }),
 
-  deployScout: (id, missionId, routeId) => set((state) => {
-    const updatedScouts = state.fleet.scouts.map(s => s.id === id ? { ...s, status: "DEPLOYED" as const } : s);
-    const updatedFleet = { ...state.fleet, scouts: updatedScouts };
-    return {
-      fleet: updatedFleet,
-      rovers: [updatedFleet.mother, ...updatedFleet.scouts].filter(Boolean) as any[] as Rover[],
-      scouts: updatedFleet.scouts as any[] as Rover[]
-    };
-  }),
-  recoverScout: (id) => set((state) => {
-    const updatedScouts = state.fleet.scouts.map(s => s.id === id ? { ...s, status: "READY" as const } : s);
-    const updatedFleet = { ...state.fleet, scouts: updatedScouts };
-    return {
-      fleet: updatedFleet,
-      rovers: [updatedFleet.mother, ...updatedFleet.scouts].filter(Boolean) as any[] as Rover[],
-      scouts: updatedFleet.scouts as any[] as Rover[]
-    };
-  }),
+  deployScout: (id, missionId, routeId) => {
+    if (typeof window !== "undefined" && (window as any).__aresWsClient) {
+      (window as any).__aresWsClient.send({
+        type: "rover_command",
+        target: "ARES-MOTHER-01",
+        command: "deploy",
+        value: "deployScout",
+        timestamp: Date.now()
+      });
+    }
+    set((state) => {
+      const updatedScouts = state.fleet.scouts.map(s => s.id === id ? { ...s, status: "READY_FOR_DEPLOYMENT" as const } : s);
+      const updatedFleet = { ...state.fleet, scouts: updatedScouts };
+      return {
+        fleet: updatedFleet,
+        rovers: [updatedFleet.mother, ...updatedFleet.scouts].filter(Boolean) as any[] as Rover[],
+        scouts: updatedFleet.scouts as any[] as Rover[]
+      };
+    });
+  },
+  recoverScout: (id) => {
+    if (typeof window !== "undefined" && (window as any).__aresWsClient) {
+      (window as any).__aresWsClient.send({
+        type: "rover_command",
+        target: "ARES-MOTHER-01",
+        command: "deploy",
+        value: "retractScout",
+        timestamp: Date.now()
+      });
+    }
+    set((state) => {
+      const updatedScouts = state.fleet.scouts.map(s => s.id === id ? { ...s, status: "DOCKED" as const } : s);
+      const updatedFleet = { ...state.fleet, scouts: updatedScouts };
+      return {
+        fleet: updatedFleet,
+        rovers: [updatedFleet.mother, ...updatedFleet.scouts].filter(Boolean) as any[] as Rover[],
+        scouts: updatedFleet.scouts as any[] as Rover[]
+      };
+    });
+  },
 
   updateObjectiveStatus: (missionId, objectiveId, status) => set((state) => {
     const updatedMissions = state.missions.map(m => {

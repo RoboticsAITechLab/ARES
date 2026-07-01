@@ -9,6 +9,68 @@
 #include "val/kinematics.h"
 #include <Arduino.h>
 #include <ArduinoOTA.h>
+#include <esp_now.h>
+#include <WiFi.h>
+
+// ESP-NOW structures
+struct __attribute__((packed)) ESPNowTelemetry {
+    float battery;
+    float yaw;
+    float pitch;
+    float roll;
+    float distance;
+    float temp;
+    char status[32];
+    float speed;
+};
+
+struct __attribute__((packed)) ESPNowCommand {
+    char command[16];
+    char valueStr[16];
+    float valueNum;
+};
+
+ScoutData scoutTelemetry;
+unsigned long lastScoutRxTime = 0;
+
+// Hardcoded Scout MAC Address
+uint8_t scoutMac[] = {0x24, 0x62, 0xAB, 0xD4, 0x22, 0x14};
+
+#ifdef ESP_IDF_VERSION_MAJOR
+#if ESP_IDF_VERSION_MAJOR >= 5
+void OnDataRecv(const esp_now_recv_info_t * recv_info, const uint8_t *incomingData, int len) {
+#else
+void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len) {
+#endif
+#else
+void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len) {
+#endif
+    if (len == sizeof(ESPNowTelemetry)) {
+        ESPNowTelemetry packet;
+        memcpy(&packet, incomingData, sizeof(packet));
+        scoutTelemetry.active = true;
+        scoutTelemetry.battery = packet.battery;
+        scoutTelemetry.heading = packet.yaw;
+        scoutTelemetry.pitch = packet.pitch;
+        scoutTelemetry.roll = packet.roll;
+        scoutTelemetry.distance = packet.distance;
+        scoutTelemetry.temperature = packet.temp;
+        scoutTelemetry.speed = packet.speed;
+        strncpy(scoutTelemetry.status, packet.status, sizeof(scoutTelemetry.status));
+        scoutTelemetry.signal = constrain(100 + WiFi.RSSI(), 0, 100);
+        lastScoutRxTime = millis();
+    }
+}
+
+void sendScoutCommand(const char* commandName, const char* valueStr, float valueNum) {
+    ESPNowCommand packet;
+    memset(&packet, 0, sizeof(packet));
+    strncpy(packet.command, commandName, sizeof(packet.command) - 1);
+    strncpy(packet.valueStr, valueStr, sizeof(packet.valueStr) - 1);
+    packet.valueNum = valueNum;
+    esp_now_send(scoutMac, (uint8_t*)&packet, sizeof(packet));
+    Serial.printf("[ESP-NOW] Sent command '%s' (val='%s') to Scout.\n", commandName, valueStr);
+}
 
 // Wi-Fi Station Configuration (Edit to connect your rover to the Internet)
 const char *WIFI_SSID = "Airtel_RoboticsAiTechLab";
@@ -103,6 +165,21 @@ void setup() {
 
   Serial.println("[System] Boot Sequence Complete. ARES Rover is ONLINE.");
   Serial.println("==================================================");
+
+  // Initialize ESP-NOW
+  if (esp_now_init() == ESP_OK) {
+      esp_now_register_recv_cb(OnDataRecv);
+      esp_now_peer_info_t peerInfo;
+      memset(&peerInfo, 0, sizeof(peerInfo));
+      memcpy(peerInfo.peer_addr, scoutMac, 6);
+      peerInfo.channel = 0;
+      peerInfo.encrypt = false;
+      if (esp_now_add_peer(&peerInfo) == ESP_OK) {
+          Serial.println("[ESP-NOW] Scout peer registered successfully.");
+      }
+  } else {
+      Serial.println("[ESP-NOW] Initialization failed.");
+  }
 }
 
 void loop() {
@@ -145,11 +222,19 @@ void loop() {
     float currentSpeed =
         (targetLinear != 0.0f) ? fabs(targetLinear * currentThrottle) : 0.0f;
 
+    // Scout link loss check on Mother side
+    if (scoutTelemetry.active && (millis() - lastScoutRxTime > 4000)) {
+        strncpy(scoutTelemetry.status, "LOST_LINK", sizeof(scoutTelemetry.status));
+    }
+
     // Serialize and broadcast telemetry
     String telemetryData = PacketProtocol::serializeTelemetry(
         volts, pct, rssi, safetyTriggered, battLow, currentSpeed, pitch, roll,
-        yaw, distance);
+        yaw, distance, scoutTelemetry);
     webSocketClient.sendTelemetry(telemetryData);
+
+    // Send periodic heartbeat to Scout
+    sendScoutCommand("HEARTBEAT", "", 0.0f);
   }
 
   // Sleep slightly to yield to ESP32 background tasks
@@ -158,6 +243,17 @@ void loop() {
 
 // Callback handler for WebSocket commands
 void handleIncomingCommand(const RoverCommand &cmd) {
+  if (cmd.target == "ARES-SCOUT-01" || cmd.target == "scout") {
+      sendScoutCommand(cmd.command.c_str(), cmd.valueStr.c_str(), cmd.valueNum);
+      
+      if (cmd.command == "SET_STATE") {
+          strncpy(scoutTelemetry.status, cmd.valueStr.c_str(), sizeof(scoutTelemetry.status) - 1);
+      } else if (cmd.command == "estop") {
+          strncpy(scoutTelemetry.status, "EMERGENCY_STOP", sizeof(scoutTelemetry.status) - 1);
+      }
+      return;
+  }
+
   // Reset safety watchdog timer
   watchdog.feed();
 
@@ -223,8 +319,12 @@ void handleIncomingCommand(const RoverCommand &cmd) {
   } else if (cmd.command == "deploy") {
     if (cmd.valueStr == "deployScout") {
       servoDriver.deployScout();
+      strncpy(scoutTelemetry.status, "READY_FOR_DEPLOYMENT", sizeof(scoutTelemetry.status) - 1);
+      sendScoutCommand("SET_STATE", "READY_FOR_DEPLOYMENT", 0.0f);
     } else if (cmd.valueStr == "retractScout") {
       servoDriver.retractScout();
+      strncpy(scoutTelemetry.status, "DOCKED", sizeof(scoutTelemetry.status) - 1);
+      sendScoutCommand("SET_STATE", "DOCKED", 0.0f);
     }
   } else if (cmd.command == "estop") {
     targetLinear = 0.0f;

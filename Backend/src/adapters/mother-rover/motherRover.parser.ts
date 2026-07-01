@@ -42,7 +42,18 @@ export class MotherRoverParser {
           heapFree: data.heapFree || 0,
           uptime: data.uptime || 0
         } as any,
-        scouts: []
+        scouts: Array.isArray(data.scouts) ? data.scouts.map((s: any) => ({
+          id: s.id || "scout-rover",
+          battery: s.battery ?? 100,
+          signal: s.signal ?? 100,
+          temperature: s.temperature ?? 25,
+          speed: s.speed ?? 0,
+          heading: s.heading ?? 0,
+          x: s.x ?? 45,
+          y: s.y ?? 35,
+          status: s.status || "ACTIVE",
+          timestamp: Date.now()
+        })) : []
       };
     } catch (err) {
       console.error("[Parser] Failed to parse telemetry JSON packet:", err);

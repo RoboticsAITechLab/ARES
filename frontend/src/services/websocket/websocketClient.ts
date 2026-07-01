@@ -24,6 +24,9 @@ export class AresWebSocketClient {
         }
       }
       AresWebSocketClient.instance = new AresWebSocketClient(url);
+      if (typeof window !== "undefined") {
+        (window as any).__aresWsClient = AresWebSocketClient.instance;
+      }
     }
     return AresWebSocketClient.instance;
   }

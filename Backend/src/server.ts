@@ -72,6 +72,32 @@ const handleTelemetryUpdate = async (packet: FleetPacket) => {
       // Append standard historical data
       await telemetryStore.appendHistory(packet.mother.id, packet.mother);
     }
+    
+    if (packet.scouts && Array.isArray(packet.scouts)) {
+      for (const s of packet.scouts) {
+        await prisma.rover.upsert({
+          where: { id: s.id },
+          update: {
+            battery: s.battery,
+            signal: s.signal,
+            temperature: s.temperature,
+            speed: s.speed,
+            lastContact: new Date()
+          },
+          create: {
+            id: s.id,
+            name: s.id,
+            type: "scout",
+            status: s.status || "ACTIVE",
+            battery: s.battery,
+            signal: s.signal,
+            temperature: s.temperature,
+            speed: s.speed
+          }
+        });
+        await telemetryStore.appendHistory(s.id, s);
+      }
+    }
   } catch (err) {
     console.error("[Database] Failed to persist telemetry packet:", err);
   }
@@ -108,12 +134,12 @@ if (isPhysical) {
   virtualRover.startSimulator();
 }
 
-wsManager.onCommand((command, value) => {
+wsManager.onCommand((command, value, target) => {
   // If a physical rover is connected, always prioritize sending commands to it
   if (wsManager.isRoverConnected()) {
-    wsManager.sendCommandToRover(command, value);
+    wsManager.sendCommandToRover(command, value, target);
   } else if (isPhysical) {
-    wsManager.sendCommandToRover(command, value);
+    wsManager.sendCommandToRover(command, value, target);
   } else if (virtualRover) {
     virtualRover.handleCommand(command, value);
   }

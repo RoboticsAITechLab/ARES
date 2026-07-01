@@ -6,13 +6,13 @@ import { prisma } from "../prisma";
 export class WebSocketServerManager {
   private wss: WsServer | null = null;
   private heartbeatInterval: NodeJS.Timeout | null = null;
-  private commandHandler: ((command: string, value: any) => void) | null = null;
+  private commandHandler: ((command: string, value: any, target?: string) => void) | null = null;
   private telemetryHandler: ((data: any) => void) | null = null;
 
   private controllers: Set<WebSocket> = new Set();
   private roverSocket: WebSocket | null = null;
 
-  public onCommand(handler: (command: string, value: any) => void): void {
+  public onCommand(handler: (command: string, value: any, target?: string) => void): void {
     this.commandHandler = handler;
   }
 
@@ -150,7 +150,7 @@ export class WebSocketServerManager {
           try {
             const message = JSON.parse(rawMessage.toString());
             if (message.type === "rover_command" && this.commandHandler) {
-              this.commandHandler(message.command, message.value);
+              this.commandHandler(message.command, message.value, message.target);
             }
           } catch (err) {
             console.error("[ARES WebSocket] Error parsing incoming controller message:", err);
@@ -216,11 +216,12 @@ export class WebSocketServerManager {
     return this.roverSocket !== null && this.roverSocket.readyState === WebSocket.OPEN;
   }
 
-  public sendCommandToRover(command: string, value: any): void {
+  public sendCommandToRover(command: string, value: any, target?: string): void {
     if (this.roverSocket && this.roverSocket.readyState === WebSocket.OPEN) {
       try {
         const payload = JSON.stringify({
           type: "rover_command",
+          target: target || "ARES-MOTHER-01",
           command,
           value,
           token: "ares_auth_secret",

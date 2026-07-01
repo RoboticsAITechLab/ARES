@@ -6,7 +6,10 @@ export type ScoutState =
   | "RETURNING"
   | "RECOVERING"
   | "OFFLINE"
-  | "ERROR";
+  | "ERROR"
+  | "READY_FOR_DEPLOYMENT"
+  | "LOST_LINK"
+  | "EMERGENCY_STOP";
 
 export interface Scout {
   id: string;

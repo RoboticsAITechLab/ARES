@@ -10,7 +10,10 @@ export type RoverState =
   | "DOCKED"
   | "ACTIVE"
   | "DEPLOYING"
-  | "RECOVERING";
+  | "RECOVERING"
+  | "READY_FOR_DEPLOYMENT"
+  | "LOST_LINK"
+  | "EMERGENCY_STOP";
 
 export interface RoverStateTransition {
   timestamp: string;
