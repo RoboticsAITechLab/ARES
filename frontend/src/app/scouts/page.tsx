@@ -82,7 +82,7 @@ export default function ScoutsPage() {
     heading: 0,
     pitch: 0,
     roll: 0,
-    distance: 0
+    obstacleDistance: 0
   };
 
   return (
@@ -197,7 +197,7 @@ export default function ScoutsPage() {
                 <div className="flex justify-between items-center text-[10px] font-bold text-slate-350">
                   <span>COLLISION DISTANCE:</span>
                   <span className="text-cyan-400 font-extrabold tabular-nums">
-                    {activeScout.distance !== undefined ? activeScout.distance.toFixed(1) : 0} cm
+                    {activeScout.obstacleDistance !== undefined ? activeScout.obstacleDistance.toFixed(1) : 0} cm
                   </span>
                 </div>
               </div>
