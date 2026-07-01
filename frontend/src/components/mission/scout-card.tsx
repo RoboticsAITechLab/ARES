@@ -135,8 +135,8 @@ export default function ScoutCard({ rover }: ScoutCardProps) {
             FLEET_DEPLOYMENT_CONSOLE
           </div>
 
-          {/* DOCKED State Action */}
-          {rover.status === "DOCKED" && (
+          {/* DOCKED/OFFLINE State Action */}
+          {(rover.status === "DOCKED" || rover.status === "OFFLINE") && (
             <Button
               onClick={() => handleDeployScout(rover.id)}
               className="w-full text-[9px] h-7 bg-cyan-500 hover:bg-cyan-600 text-slate-950 font-black uppercase cursor-pointer"
