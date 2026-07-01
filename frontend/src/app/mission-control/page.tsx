@@ -19,7 +19,27 @@ export default function MissionControlPage() {
   const { connectionStatus } = useConnectionStore();
 
   const motherRover = fleet.mother;
-  const scoutRovers = fleet.scouts;
+  const scoutRovers = fleet.scouts.length > 0 ? fleet.scouts : [{
+    id: "ARES-SCOUT-01",
+    name: "ARES-SCOUT-01",
+    battery: 98,
+    signal: 0,
+    status: "OFFLINE",
+    temperature: 0,
+    x: 45,
+    y: 35,
+    heading: 0,
+    speed: 0,
+    type: "scout",
+    lastContact: new Date().toISOString(),
+    cpu: 0,
+    memory: 0,
+    linkQuality: 0,
+    health: 100,
+    stateHistory: [],
+    lastHeartbeat: new Date().toISOString(),
+    healthScore: 100
+  }] as any[];
   const activeAlertsCount = events.filter(a => a.severity === "CRITICAL" || a.severity === "WARNING").length;
 
   const currentMission = missionControl.currentMission;
