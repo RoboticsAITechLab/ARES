@@ -28,3 +28,4 @@ float UltrasonicDriver::readDistanceCm() {
     float distance = (static_cast<float>(duration) * 0.0343f) / 2.0f;
     return distance;
 }
+

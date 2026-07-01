@@ -20,7 +20,8 @@ export default function MotherRoverCard({ rover }: MotherRoverCardProps) {
     y: 0,
     heading: 0,
     speed: 0,
-    connectedScouts: 0
+    connectedScouts: 0,
+    obstacleDistance: 0
   };
 
   const normStatus = (activeRover.status || "").toLowerCase();
@@ -109,6 +110,13 @@ export default function MotherRoverCard({ rover }: MotherRoverCardProps) {
           <div className="bg-slate-950/40 p-2 rounded border border-slate-900 flex justify-between items-center">
             <span>HEADING:</span>
             <span className="font-bold text-slate-200">{activeRover.heading}°</span>
+          </div>
+
+          <div className="bg-slate-950/40 p-2 rounded border border-slate-900 flex justify-between items-center col-span-2">
+            <span>SONAR OBSTACLE:</span>
+            <span className="font-extrabold text-cyan-400">
+              {activeRover.obstacleDistance !== undefined ? `${activeRover.obstacleDistance.toFixed(1)} cm` : "0.0 cm"}
+            </span>
           </div>
         </div>
       </div>
