@@ -24,7 +24,7 @@ export default function MotherRoverCard({ rover }: MotherRoverCardProps) {
   };
 
   const normStatus = (activeRover.status || "").toLowerCase();
-  const style = STATUS_STYLES[normStatus as keyof typeof STATUS_STYLES] || STATUS_STYLES.offline;
+  const style = STATUS_STYLES[normStatus as keyof typeof STATUS_STYLES] || STATUS_STYLES.critical;
 
   return (
     <div className="relative overflow-hidden rounded border border-slate-800 bg-[#111827] shadow-lg flex flex-col select-none font-mono">
