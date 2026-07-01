@@ -1,9 +1,12 @@
 "use client";
 
-import { Battery, Wifi, MapPin } from "lucide-react";
+import { Battery, Wifi, MapPin, Anchor, ShieldAlert, Cpu, ArrowRight } from "lucide-react";
 import { ScoutRover } from "@/types/ScoutRover";
 import { STATUS_STYLES } from "@/lib/constants";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { AresWebSocketClient } from "@/services/websocket/websocketClient";
+import { cn } from "@/lib/utils";
 
 interface ScoutCardProps {
   rover: ScoutRover;
@@ -13,6 +16,37 @@ export default function ScoutCard({ rover }: ScoutCardProps) {
   // Normalize status mapping to style
   const normStatus = (rover.status || "").toLowerCase();
   const style = STATUS_STYLES[normStatus as keyof typeof STATUS_STYLES] || STATUS_STYLES.online;
+
+  const sendCommand = (target: string, command: string, value: any) => {
+    try {
+      const client = AresWebSocketClient.getInstance();
+      client.send({
+        type: "rover_command",
+        target,
+        command,
+        value,
+        timestamp: Date.now()
+      });
+    } catch (e) {
+      console.error("[ARES Card] WebSocket send failed:", e);
+    }
+  };
+
+  const handleDeployScout = (id: string) => {
+    sendCommand("ARES-MOTHER-01", "deploy", "deployScout");
+  };
+
+  const handleSetActive = (id: string) => {
+    sendCommand(id, "SET_STATE", "ACTIVE");
+  };
+
+  const handleDockScout = (id: string) => {
+    sendCommand("ARES-MOTHER-01", "deploy", "retractScout");
+  };
+
+  const handleEstop = (id: string) => {
+    sendCommand(id, "estop", "");
+  };
 
   return (
     <div className="rounded border border-slate-800 bg-[#111827] hover:border-slate-700/80 transition duration-150 relative font-mono select-none">
@@ -93,6 +127,61 @@ export default function ScoutCard({ rover }: ScoutCardProps) {
             </span>
             <span>{rover.heading}°</span>
           </div>
+        </div>
+
+        {/* Human-Assisted Control Sequence Actions */}
+        <div className="border-t border-slate-800/80 pt-3 mt-1 space-y-2">
+          <div className="text-[8px] text-slate-500 font-bold uppercase tracking-wider">
+            FLEET_DEPLOYMENT_CONSOLE
+          </div>
+
+          {/* DOCKED State Action */}
+          {rover.status === "DOCKED" && (
+            <Button
+              onClick={() => handleDeployScout(rover.id)}
+              className="w-full text-[9px] h-7 bg-cyan-500 hover:bg-cyan-600 text-slate-950 font-black uppercase cursor-pointer"
+            >
+              Open Rear Door & Deploy
+            </Button>
+          )}
+
+          {/* READY_FOR_DEPLOYMENT State Action */}
+          {rover.status === "READY_FOR_DEPLOYMENT" && (
+            <div className="flex gap-2">
+              <Button
+                onClick={() => handleSetActive(rover.id)}
+                className="flex-1 text-[9px] h-7 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black uppercase cursor-pointer"
+              >
+                Confirm Active
+              </Button>
+              <Button
+                onClick={() => handleDockScout(rover.id)}
+                className="text-[9px] h-7 bg-rose-500/10 hover:bg-rose-500/20 text-rose-455 border border-rose-500/25 font-bold uppercase cursor-pointer"
+              >
+                Cancel
+              </Button>
+            </div>
+          )}
+
+          {/* ACTIVE / LOST_LINK / EMERGENCY_STOP State Action */}
+          {(rover.status === "ACTIVE" || rover.status === "LOST_LINK" || rover.status === "EMERGENCY_STOP") && (
+            <div className="space-y-1.5">
+              <Button
+                onClick={() => handleDockScout(rover.id)}
+                className="w-full text-[9px] h-7 bg-cyan-500 hover:bg-cyan-600 text-slate-950 font-black uppercase cursor-pointer flex items-center justify-center gap-1"
+              >
+                <Anchor className="h-3 w-3" />
+                Dock Scout (Close Door)
+              </Button>
+              <Button
+                onClick={() => handleEstop(rover.id)}
+                className="w-full text-[9px] h-7 bg-rose-500 hover:bg-rose-600 text-white font-black uppercase cursor-pointer flex items-center justify-center gap-1"
+              >
+                <ShieldAlert className="h-3 w-3" />
+                EMERGENCY STOP SCOUT
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </div>
