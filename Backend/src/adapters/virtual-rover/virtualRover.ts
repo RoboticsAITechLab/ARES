@@ -9,6 +9,14 @@ export class VirtualRover {
   private heading = 142;
   private speed = 0.0;
 
+  // Scout Rover simulation state
+  private scoutBattery = 95.0;
+  private scoutX = 40;
+  private scoutY = 30;
+  private scoutHeading = 180;
+  private scoutSpeed = 0.0;
+  private scoutStatus = "DOCKED"; // DOCKED, ACTIVE, EMERGENCY_STOP
+
   constructor(private readonly onUpdate: (packet: FleetPacket) => void) {}
 
   public startSimulator(): void {
@@ -26,64 +34,111 @@ export class VirtualRover {
     }
   }
 
-  public handleCommand(command: string, value?: any): void {
-    console.log(`[ARES Virtual Rover] Executing command: ${command} with value:`, value);
+  public handleCommand(command: string, value?: any, target?: string): void {
+    console.log(`[ARES Virtual Rover] Executing command targeting ${target || "mother"}: ${command} with value:`, value);
     let updated = false;
 
-    if (command === "move") {
-      const dir = value;
-      if (dir === "forward") {
-        if (this.speed === 0.0) this.speed = 0.5;
-        const rad = (this.heading * Math.PI) / 180;
-        this.x = Math.max(10, Math.min(90, this.x + Math.round(Math.cos(rad) * 2)));
-        this.y = Math.max(10, Math.min(90, this.y + Math.round(Math.sin(rad) * 2)));
+    // Handle Mother vs Scout selection
+    const isScout = target === "ARES-SCOUT-01";
+
+    if (command === "deploy") {
+      if (value === "deployScout") {
+        this.scoutStatus = "ACTIVE";
+        this.scoutBattery = 95.0;
+        this.scoutX = this.x - 2; // deploy near mother rover
+        this.scoutY = this.y - 2;
         updated = true;
-      } else if (dir === "backward") {
-        if (this.speed === 0.0) this.speed = 0.5;
-        const rad = (this.heading * Math.PI) / 180;
-        this.x = Math.max(10, Math.min(90, this.x - Math.round(Math.cos(rad) * 2)));
-        this.y = Math.max(10, Math.min(90, this.y - Math.round(Math.sin(rad) * 2)));
-        updated = true;
-      } else if (dir === "left") {
-        this.heading = (this.heading - 15 + 360) % 360;
-        updated = true;
-      } else if (dir === "right") {
-        this.heading = (this.heading + 15) % 360;
-        updated = true;
-      } else if (dir === "forward-left") {
-        if (this.speed === 0.0) this.speed = 0.5;
-        this.heading = (this.heading - 10 + 360) % 360;
-        const rad = (this.heading * Math.PI) / 180;
-        this.x = Math.max(10, Math.min(90, this.x + Math.round(Math.cos(rad) * 2)));
-        this.y = Math.max(10, Math.min(90, this.y + Math.round(Math.sin(rad) * 2)));
-        updated = true;
-      } else if (dir === "forward-right") {
-        if (this.speed === 0.0) this.speed = 0.5;
-        this.heading = (this.heading + 10) % 360;
-        const rad = (this.heading * Math.PI) / 180;
-        this.x = Math.max(10, Math.min(90, this.x + Math.round(Math.cos(rad) * 2)));
-        this.y = Math.max(10, Math.min(90, this.y + Math.round(Math.sin(rad) * 2)));
-        updated = true;
-      } else if (dir === "backward-left") {
-        if (this.speed === 0.0) this.speed = 0.5;
-        this.heading = (this.heading - 10 + 360) % 360;
-        const rad = (this.heading * Math.PI) / 180;
-        this.x = Math.max(10, Math.min(90, this.x - Math.round(Math.cos(rad) * 2)));
-        this.y = Math.max(10, Math.min(90, this.y - Math.round(Math.sin(rad) * 2)));
-        updated = true;
-      } else if (dir === "backward-right") {
-        if (this.speed === 0.0) this.speed = 0.5;
-        this.heading = (this.heading + 10) % 360;
-        const rad = (this.heading * Math.PI) / 180;
-        this.x = Math.max(10, Math.min(90, this.x - Math.round(Math.cos(rad) * 2)));
-        this.y = Math.max(10, Math.min(90, this.y - Math.round(Math.sin(rad) * 2)));
+      } else if (value === "retractScout") {
+        this.scoutStatus = "DOCKED";
+        this.scoutSpeed = 0.0;
         updated = true;
       }
+    } else if (command === "SET_STATE" && value === "ACTIVE" && isScout) {
+      this.scoutStatus = "ACTIVE";
+      updated = true;
+    } else if (command === "estop") {
+      if (isScout) {
+        this.scoutStatus = "EMERGENCY_STOP";
+        this.scoutSpeed = 0.0;
+      } else {
+        // Mother rover is not stopped by scout commands
+      }
+      updated = true;
+    } else if (command === "move") {
+      const dir = value;
+      let targetHeading = isScout ? this.scoutHeading : this.heading;
+      let targetX = isScout ? this.scoutX : this.x;
+      let targetY = isScout ? this.scoutY : this.y;
+      let targetSpeed = isScout ? this.scoutSpeed : this.speed;
+
+      if (dir === "forward") {
+        if (targetSpeed === 0.0) targetSpeed = 0.5;
+        const rad = (targetHeading * Math.PI) / 180;
+        targetX = Math.max(10, Math.min(90, targetX + Math.round(Math.cos(rad) * 2)));
+        targetY = Math.max(10, Math.min(90, targetY + Math.round(Math.sin(rad) * 2)));
+      } else if (dir === "backward") {
+        if (targetSpeed === 0.0) targetSpeed = 0.5;
+        const rad = (targetHeading * Math.PI) / 180;
+        targetX = Math.max(10, Math.min(90, targetX - Math.round(Math.cos(rad) * 2)));
+        targetY = Math.max(10, Math.min(90, targetY - Math.round(Math.sin(rad) * 2)));
+      } else if (dir === "left") {
+        targetHeading = (targetHeading - 15 + 360) % 360;
+      } else if (dir === "right") {
+        targetHeading = (targetHeading + 15) % 360;
+      } else if (dir === "forward-left") {
+        if (targetSpeed === 0.0) targetSpeed = 0.5;
+        targetHeading = (targetHeading - 10 + 360) % 360;
+        const rad = (targetHeading * Math.PI) / 180;
+        targetX = Math.max(10, Math.min(90, targetX + Math.round(Math.cos(rad) * 2)));
+        targetY = Math.max(10, Math.min(90, targetY + Math.round(Math.sin(rad) * 2)));
+      } else if (dir === "forward-right") {
+        if (targetSpeed === 0.0) targetSpeed = 0.5;
+        targetHeading = (targetHeading + 10) % 360;
+        const rad = (targetHeading * Math.PI) / 180;
+        targetX = Math.max(10, Math.min(90, targetX + Math.round(Math.cos(rad) * 2)));
+        targetY = Math.max(10, Math.min(90, targetY + Math.round(Math.sin(rad) * 2)));
+      } else if (dir === "backward-left") {
+        if (targetSpeed === 0.0) targetSpeed = 0.5;
+        targetHeading = (targetHeading - 10 + 360) % 360;
+        const rad = (targetHeading * Math.PI) / 180;
+        targetX = Math.max(10, Math.min(90, targetX - Math.round(Math.cos(rad) * 2)));
+        targetY = Math.max(10, Math.min(90, targetY - Math.round(Math.sin(rad) * 2)));
+      } else if (dir === "backward-right") {
+        if (targetSpeed === 0.0) targetSpeed = 0.5;
+        targetHeading = (targetHeading + 10) % 360;
+        const rad = (targetHeading * Math.PI) / 180;
+        targetX = Math.max(10, Math.min(90, targetX - Math.round(Math.cos(rad) * 2)));
+        targetY = Math.max(10, Math.min(90, targetY - Math.round(Math.sin(rad) * 2)));
+      }
+
+      if (isScout) {
+        this.scoutHeading = targetHeading;
+        this.scoutX = targetX;
+        this.scoutY = targetY;
+        this.scoutSpeed = targetSpeed;
+      } else {
+        this.heading = targetHeading;
+        this.x = targetX;
+        this.y = targetY;
+        this.speed = targetSpeed;
+      }
+      updated = true;
     } else if (command === "stop") {
-      this.speed = 0.0;
+      if (isScout) {
+        this.scoutSpeed = 0.0;
+      } else {
+        this.speed = 0.0;
+      }
       updated = true;
     } else if (command === "speed") {
-      this.speed = Math.max(0.0, Math.min(2.0, parseFloat(value)));
+      const percentage = parseFloat(value);
+      // Map percentage (0-100) back to 0.0-2.0 speed for virtual simulation
+      const speedVal = (percentage / 100) * 2.0;
+      if (isScout) {
+        this.scoutSpeed = Math.max(0.0, Math.min(2.0, speedVal));
+      } else {
+        this.speed = Math.max(0.0, Math.min(2.0, speedVal));
+      }
       updated = true;
     }
 
@@ -111,16 +166,39 @@ export class VirtualRover {
       x: this.x,
       y: this.y,
       status: "online",
-      connectedScouts: 0,
+      connectedScouts: this.scoutStatus === "ACTIVE" ? 1 : 0,
       timestamp: Date.now(),
       pitch,
       roll,
       obstacleDistance: 150
     };
 
+    const scoutPacket = {
+      id: "ARES-SCOUT-01",
+      name: "ARES-SCOUT-01",
+      battery: Math.round(this.scoutBattery),
+      signal: this.scoutStatus === "DOCKED" ? 0 : Math.max(40, Math.min(100, 85 + Math.floor(Math.random() * 15 - 7))),
+      temperature: this.scoutStatus === "DOCKED" ? 0 : Math.floor(-18 + (Math.random() * 6 - 3)),
+      x: this.scoutX,
+      y: this.scoutY,
+      heading: this.scoutHeading,
+      speed: this.scoutSpeed,
+      status: this.scoutStatus,
+      type: "scout" as const,
+      lastContact: new Date().toISOString(),
+      cpu: this.scoutStatus === "DOCKED" ? 0 : Math.floor(20 + Math.random() * 15),
+      memory: this.scoutStatus === "DOCKED" ? 0 : 38,
+      linkQuality: this.scoutStatus === "DOCKED" ? 0 : Math.max(50, Math.min(100, 80 + Math.floor(Math.random() * 10))),
+      health: 100,
+      stateHistory: [],
+      lastHeartbeat: new Date().toISOString(),
+      healthScore: 100,
+      timestamp: Date.now()
+    };
+
     const fleetPacket: FleetPacket = {
       mother: motherPacket,
-      scouts: []
+      scouts: [scoutPacket]
     };
 
     this.onUpdate(fleetPacket);
@@ -145,10 +223,27 @@ export class VirtualRover {
       this.y = Math.max(10, Math.min(90, this.y + dy));
     }
 
+    // Advance scout coordinate if active and moving
+    if (this.scoutStatus === "ACTIVE") {
+      if (this.scoutSpeed > 0) {
+        const rad = (this.scoutHeading * Math.PI) / 180;
+        const dx = Math.round(Math.cos(rad) * this.scoutSpeed * 2);
+        const dy = Math.round(Math.sin(rad) * this.scoutSpeed * 2);
+        this.scoutX = Math.max(10, Math.min(90, this.scoutX + dx));
+        this.scoutY = Math.max(10, Math.min(90, this.scoutY + dy));
+        this.scoutHeading = (this.scoutHeading + (Math.floor(Math.random() * 7) - 3) + 360) % 360;
+      } else {
+        const dx = Math.floor(Math.random() * 3) - 1;
+        const dy = Math.floor(Math.random() * 3) - 1;
+        this.scoutX = Math.max(10, Math.min(90, this.scoutX + dx));
+        this.scoutY = Math.max(10, Math.min(90, this.scoutY + dy));
+      }
+      this.scoutBattery = parseFloat(Math.max(10, this.scoutBattery - (this.scoutSpeed > 0 ? 0.08 : 0.02) - (Math.random() * 0.05)).toFixed(2));
+    }
+
     // Simulated battery discharge
     this.battery = parseFloat(Math.max(10, this.battery - (this.speed > 0 ? 0.05 : 0.01) - (Math.random() * 0.05)).toFixed(2));
 
     this.triggerUpdate();
   }
 }
-

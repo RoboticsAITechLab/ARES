@@ -46,6 +46,7 @@ TelemetryManager telemetryManager(&imuManager, &sonarSensor, &motorController, &
 // Global State
 RoverState currentRoverState = RoverState::BOOT;
 unsigned long stateChangeTimerMs = 0;
+float currentThrottle = 0.5f;
 
 void setup() {
     Serial.begin(115200);
@@ -100,6 +101,51 @@ void loop() {
             motorController.emergencyStop();
             stateChangeTimerMs = millis();
             Serial.println("[State] Set to EMERGENCY_STOP via ESP-NOW.");
+        } else if (strcmp(g_receivedCommand.command, "move") == 0) {
+            if (currentRoverState == RoverState::ACTIVE) {
+                motorController.setStandby(false);
+                String direction = String(g_receivedCommand.valueStr);
+                float leftSpd = 0.0f;
+                float rightSpd = 0.0f;
+                float baseSpd = currentThrottle;
+
+                if (direction == "forward") {
+                    leftSpd = baseSpd;
+                    rightSpd = baseSpd;
+                } else if (direction == "backward") {
+                    leftSpd = -baseSpd;
+                    rightSpd = -baseSpd;
+                } else if (direction == "left") {
+                    leftSpd = -baseSpd * 0.5f;
+                    rightSpd = baseSpd * 0.5f;
+                } else if (direction == "right") {
+                    leftSpd = baseSpd * 0.5f;
+                    rightSpd = -baseSpd * 0.5f;
+                } else if (direction == "forward-left") {
+                    leftSpd = baseSpd * 0.5f;
+                    rightSpd = baseSpd;
+                } else if (direction == "forward-right") {
+                    leftSpd = baseSpd;
+                    rightSpd = baseSpd * 0.5f;
+                } else if (direction == "backward-left") {
+                    leftSpd = -baseSpd * 0.5f;
+                    rightSpd = -baseSpd;
+                } else if (direction == "backward-right") {
+                    leftSpd = -baseSpd;
+                    rightSpd = -baseSpd * 0.5f;
+                }
+                motorController.setTargetSpeeds(leftSpd, rightSpd);
+                Serial.printf("[Cmd] Move: %s (L=%.2f, R=%.2f)\n", direction.c_str(), leftSpd, rightSpd);
+            }
+        } else if (strcmp(g_receivedCommand.command, "stop") == 0) {
+            if (currentRoverState == RoverState::ACTIVE) {
+                motorController.setTargetSpeeds(0.0f, 0.0f);
+                Serial.println("[Cmd] Stopped motors.");
+            }
+        } else if (strcmp(g_receivedCommand.command, "speed") == 0) {
+            float percentage = g_receivedCommand.valueNum;
+            currentThrottle = constrain(percentage / 100.0f, 0.0f, 1.0f);
+            Serial.printf("[Cmd] Speed throttle updated to %.2f\n", currentThrottle);
         }
     }
 

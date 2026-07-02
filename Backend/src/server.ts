@@ -141,7 +141,7 @@ wsManager.onCommand((command, value, target) => {
   } else if (isPhysical) {
     wsManager.sendCommandToRover(command, value, target);
   } else if (virtualRover) {
-    virtualRover.handleCommand(command, value);
+    virtualRover.handleCommand(command, value, target);
   }
 });
 

@@ -16,7 +16,7 @@ export class AresWebSocketClient {
 
   public static getInstance(): AresWebSocketClient {
     if (!AresWebSocketClient.instance) {
-      let url = "ws://localhost:3001/ws?token=ares_auth_secret&role=controller";
+      let url = "ws://127.0.0.1:3001/ws?token=ares_auth_secret&role=controller";
       if (typeof window !== "undefined") {
         const hostname = window.location.hostname;
         if (hostname !== "localhost" && hostname !== "127.0.0.1") {

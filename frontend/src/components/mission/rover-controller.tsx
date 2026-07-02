@@ -15,7 +15,9 @@ import {
   Radio, 
   Keyboard, 
   Navigation,
-  Compass
+  Compass,
+  Zap,
+  Target
 } from "lucide-react";
 import { Button } from "../ui/button";
 import { AresWebSocketClient } from "@/services/websocket/websocketClient";
@@ -25,8 +27,9 @@ import { cn } from "@/lib/utils";
 
 export default function RoverController() {
   const { connectionStatus } = useConnectionStore();
-  const { addLog, isEmergencyStop, rovers } = useMissionStore();
+  const { addLog, isEmergencyStop, rovers, fleet } = useMissionStore();
   
+  const [targetRoverId, setTargetRoverId] = useState<"ARES-MOTHER-01" | "ARES-SCOUT-01">("ARES-MOTHER-01");
   const [controlMode, setControlMode] = useState<"manual" | "auto">("manual");
   const [speed, setSpeed] = useState<number>(0.5);
   const [lastCommand, setLastCommand] = useState<string>("NONE");
@@ -50,7 +53,22 @@ export default function RoverController() {
   const pressedKeysRef = useRef<Set<string>>(new Set());
   const lastSentCommandRef = useRef<string>("stop");
 
-  const motherRover = rovers.find(r => r.id === "mother-rover" || r.type === "mother");
+  const motherRover = rovers.find(r => r.id === "mother-rover" || r.type === "mother") || fleet?.mother;
+  const scoutRover = rovers.find(r => r.id === "ARES-SCOUT-01" || r.type === "scout") || fleet?.scouts?.[0];
+
+  // Pick the telemetry from active rover
+  const activeTelemetryRover = targetRoverId === "ARES-MOTHER-01" ? motherRover : scoutRover;
+
+  // Accent styling based on selection
+  const isMother = targetRoverId === "ARES-MOTHER-01";
+  const accentText = isMother ? "text-cyan-400" : "text-amber-500";
+  const accentBg = isMother ? "bg-cyan-500" : "bg-amber-500";
+  const accentBorder = isMother ? "border-cyan-500" : "border-amber-500";
+  const accentBorderLight = isMother ? "border-cyan-500/30" : "border-amber-500/30";
+  const accentBgLight = isMother ? "bg-cyan-950/20" : "bg-amber-950/20";
+  const accentShadow = isMother ? "shadow-[0_0_10px_rgba(6,182,212,0.6)]" : "shadow-[0_0_10px_rgba(245,158,11,0.6)]";
+  const accentHoverClass = isMother ? "hover:text-cyan-400 hover:border-cyan-500/40" : "hover:text-amber-500 hover:border-amber-500/40";
+  const accentGlow = isMother ? "shadow-[0_0_12px_rgba(6,182,212,0.4)]" : "shadow-[0_0_12px_rgba(245,158,11,0.4)]";
 
   useEffect(() => {
     wsClientRef.current = AresWebSocketClient.getInstance();
@@ -70,17 +88,19 @@ export default function RoverController() {
     if (wsClientRef.current) {
       wsClientRef.current.send({
         type: "rover_command",
+        target: targetRoverId,
         command,
-        value
+        value,
+        timestamp: Date.now()
       });
       
       let logDesc = "";
       if (command === "move") {
-        logDesc = `Manual vector drive directive: ${command.toUpperCase()}${value ? ` (${value})` : ""}`;
+        logDesc = `[${targetRoverId}] Drive vector directive: ${command.toUpperCase()}${value ? ` (${value})` : ""}`;
       } else if (command === "stop") {
-        logDesc = `Manual vector drive: STOP / DE-ACCELERATE`;
+        logDesc = `[${targetRoverId}] Drive STOP / DE-ACCELERATE`;
       } else if (command === "speed") {
-        logDesc = `Manual speed throttle set to ${value}%`;
+        logDesc = `[${targetRoverId}] Speed throttle set to ${value}%`;
       }
 
       setLastCommand(`${command.toUpperCase()}${value ? ` (${value})` : ""}`);
@@ -202,7 +222,7 @@ export default function RoverController() {
       pressedKeysRef.current.clear();
       setActiveKeys({ w: false, a: false, s: false, d: false, Space: false });
     };
-  }, [isKeyboardActive, isEmergencyStop, connectionStatus]);
+  }, [isKeyboardActive, isEmergencyStop, connectionStatus, targetRoverId]);
 
   const handleSpeedChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const targetSpeed = parseFloat(e.target.value);
@@ -232,64 +252,49 @@ export default function RoverController() {
   };
 
   return (
-    <div className="relative overflow-hidden rounded border border-slate-800 bg-[#111827] shadow-lg flex flex-col select-none font-mono">
+    <div className={cn(
+      "relative overflow-hidden rounded border bg-[#111827] shadow-lg flex flex-col select-none font-mono transition-all duration-300",
+      accentBorder
+    )}>
       {/* Header Banner */}
-      <div className="border-b border-slate-800 bg-slate-900/90 px-4 py-3 flex items-center justify-between">
+      <div className="border-b border-slate-800 bg-slate-900/90 px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Navigation className="h-4 w-4 text-cyan-400 animate-pulse" />
+          <Navigation className={cn("h-4 w-4 animate-pulse", accentText)} />
           <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest">
-            ROVER VECTOR FLIGHT CONTROL
+            VECTOR DRIVE FLIGHT OVERRIDE
           </span>
         </div>
-        <div className="flex items-center gap-1.5">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setControlMode(controlMode === "manual" ? "auto" : "manual")}
-            className={cn(
-              "text-[8px] h-5 px-2 font-bold rounded border uppercase tracking-wider",
-              controlMode === "manual" 
-                ? "border-cyan-500/30 bg-cyan-950/20 text-cyan-400" 
-                : "border-emerald-500/30 bg-emerald-950/20 text-emerald-400"
-            )}
-          >
-            {controlMode.toUpperCase()} PILOT
-          </Button>
-          
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setIsKeyboardActive(!isKeyboardActive)}
-            title="Toggle WASD Keyboard Controls"
-            className={cn(
-              "text-[8px] h-5 px-2 font-bold rounded border uppercase tracking-wider flex items-center gap-1",
-              isKeyboardActive 
-                ? "border-amber-500/30 bg-amber-950/20 text-amber-400" 
-                : "border-slate-800 bg-slate-950 text-slate-500"
-            )}
-          >
-            <Keyboard className="h-2.5 w-2.5" />
-            <span>{isKeyboardActive ? "KEY_ON" : "KEY_OFF"}</span>
-          </Button>
 
-          <Button
-            size="sm"
-            variant="outline"
+        {/* Dual Target Selection Toggles */}
+        <div className="flex bg-slate-950 p-0.5 rounded border border-slate-800/80">
+          <button
             onClick={() => {
-              setIsContinuous(!isContinuous);
               handleStop();
+              setTargetRoverId("ARES-MOTHER-01");
             }}
-            title="Toggle Continuous/Momentary Drive Mode"
             className={cn(
-              "text-[8px] h-5 px-2 font-bold rounded border uppercase tracking-wider flex items-center gap-1",
-              isContinuous 
-                ? "border-purple-500/30 bg-purple-950/20 text-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.4)]" 
-                : "border-slate-800 bg-slate-950 text-slate-500"
+              "text-[8px] px-2 py-1 rounded font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer",
+              targetRoverId === "ARES-MOTHER-01" 
+                ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30" 
+                : "text-slate-500 hover:text-slate-300 border border-transparent"
             )}
           >
-            <Radio className="h-2.5 w-2.5" />
-            <span>{isContinuous ? "CONT_MODE" : "HOLD_MODE"}</span>
-          </Button>
+            MOTHER
+          </button>
+          <button
+            onClick={() => {
+              handleStop();
+              setTargetRoverId("ARES-SCOUT-01");
+            }}
+            className={cn(
+              "text-[8px] px-2 py-1 rounded font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer",
+              targetRoverId === "ARES-SCOUT-01" 
+                ? "bg-amber-500/20 text-amber-400 border border-amber-500/30" 
+                : "text-slate-500 hover:text-slate-300 border border-transparent"
+            )}
+          >
+            SCOUT
+          </button>
         </div>
       </div>
 
@@ -302,12 +307,9 @@ export default function RoverController() {
             <span className="text-slate-200 mt-1 font-bold truncate">{lastCommand}</span>
           </div>
           <div className="bg-slate-950/60 p-2 rounded border border-slate-900/80 flex flex-col justify-between">
-            <span className="text-slate-500 uppercase tracking-widest font-bold">DSN SIGNAL LINK</span>
-            <span className={cn(
-              "font-bold mt-1",
-              connectionStatus === "connected" ? "text-cyan-400" : "text-rose-500"
-            )}>
-              {connectionStatus === "connected" ? "STABLE LOCK" : "NO LINK"}
+            <span className="text-slate-500 uppercase tracking-widest font-bold">DRIVE TARGET</span>
+            <span className={cn("font-bold mt-1 tracking-wider", accentText)}>
+              {targetRoverId.toUpperCase()}
             </span>
           </div>
         </div>
@@ -316,9 +318,9 @@ export default function RoverController() {
         <div className="flex flex-col items-center justify-center py-2">
           <div className="relative w-36 h-36 bg-slate-950/80 rounded-full border border-slate-800 p-1 flex items-center justify-center">
             {/* Compass Heading Indicator Lines */}
-            <div className="absolute inset-0 rounded-full border border-dashed border-cyan-500/10 pointer-events-none"></div>
+            <div className={cn("absolute inset-0 rounded-full border border-dashed pointer-events-none transition-all duration-300", accentBorderLight)}></div>
             
-             {/* Forward Button */}
+            {/* Forward Button */}
             <button
               onMouseDown={() => handleButtonPress("forward", "w")}
               onMouseUp={() => handleButtonRelease("w")}
@@ -329,8 +331,8 @@ export default function RoverController() {
               className={cn(
                 "absolute top-1 w-9 h-9 rounded border flex items-center justify-center transition-all cursor-pointer select-none touch-none z-10",
                 activeKeys.w
-                  ? "bg-cyan-500 text-white border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.6)]"
-                  : "bg-slate-900/90 text-slate-400 border-slate-800 hover:text-cyan-400 hover:border-cyan-500/40"
+                  ? cn(accentBg, "text-slate-950 border-white", accentShadow)
+                  : cn("bg-slate-900/90 text-slate-400 border-slate-800", accentHoverClass)
               )}
               title="Move Forward (W / Up Arrow)"
             >
@@ -348,8 +350,8 @@ export default function RoverController() {
               className={cn(
                 "absolute top-5 left-5 w-8 h-8 rounded border flex items-center justify-center transition-all cursor-pointer select-none touch-none z-10",
                 activeKeys.wl
-                  ? "bg-cyan-500 text-white border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.6)]"
-                  : "bg-slate-900/90 text-slate-400 border-slate-800 hover:text-cyan-400 hover:border-cyan-500/40"
+                  ? cn(accentBg, "text-slate-950 border-white", accentShadow)
+                  : cn("bg-slate-900/90 text-slate-400 border-slate-800", accentHoverClass)
               )}
               title="Forward Left"
             >
@@ -367,8 +369,8 @@ export default function RoverController() {
               className={cn(
                 "absolute top-5 right-5 w-8 h-8 rounded border flex items-center justify-center transition-all cursor-pointer select-none touch-none z-10",
                 activeKeys.wr
-                  ? "bg-cyan-500 text-white border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.6)]"
-                  : "bg-slate-900/90 text-slate-400 border-slate-800 hover:text-cyan-400 hover:border-cyan-500/40"
+                  ? cn(accentBg, "text-slate-950 border-white", accentShadow)
+                  : cn("bg-slate-900/90 text-slate-400 border-slate-800", accentHoverClass)
               )}
               title="Forward Right"
             >
@@ -386,8 +388,8 @@ export default function RoverController() {
               className={cn(
                 "absolute left-1 w-9 h-9 rounded border flex items-center justify-center transition-all cursor-pointer select-none touch-none z-10",
                 activeKeys.a
-                  ? "bg-cyan-500 text-white border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.6)]"
-                  : "bg-slate-900/90 text-slate-400 border-slate-800 hover:text-cyan-400 hover:border-cyan-500/40"
+                  ? cn(accentBg, "text-slate-950 border-white", accentShadow)
+                  : cn("bg-slate-900/90 text-slate-400 border-slate-800", accentHoverClass)
               )}
               title="Turn Left (A / Left Arrow)"
             >
@@ -398,7 +400,7 @@ export default function RoverController() {
             <button
               onClick={handleStop}
               className={cn(
-                "w-12 h-12 rounded-full border flex flex-col items-center justify-center transition-all cursor-pointer font-black text-[9px] tracking-wide select-none z-20",
+                "w-12 h-12 rounded-full border flex flex-col items-center justify-center transition-all cursor-pointer font-black text-[9px] tracking-wide select-none z-25",
                 activeKeys.Space
                   ? "bg-rose-600 text-white border-rose-500 shadow-[0_0_12px_rgba(239,68,68,0.7)]"
                   : "bg-slate-900 text-rose-500 border-rose-950/60 hover:bg-rose-950/20 hover:border-rose-600"
@@ -419,8 +421,8 @@ export default function RoverController() {
               className={cn(
                 "absolute right-1 w-9 h-9 rounded border flex items-center justify-center transition-all cursor-pointer select-none touch-none z-10",
                 activeKeys.d
-                  ? "bg-cyan-500 text-white border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.6)]"
-                  : "bg-slate-900/90 text-slate-400 border-slate-800 hover:text-cyan-400 hover:border-cyan-500/40"
+                  ? cn(accentBg, "text-slate-950 border-white", accentShadow)
+                  : cn("bg-slate-900/90 text-slate-400 border-slate-800", accentHoverClass)
               )}
               title="Turn Right (D / Right Arrow)"
             >
@@ -438,8 +440,8 @@ export default function RoverController() {
               className={cn(
                 "absolute bottom-5 left-5 w-8 h-8 rounded border flex items-center justify-center transition-all cursor-pointer select-none touch-none z-10",
                 activeKeys.sl
-                  ? "bg-cyan-500 text-white border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.6)]"
-                  : "bg-slate-900/90 text-slate-400 border-slate-800 hover:text-cyan-400 hover:border-cyan-500/40"
+                  ? cn(accentBg, "text-slate-950 border-white", accentShadow)
+                  : cn("bg-slate-900/90 text-slate-400 border-slate-800", accentHoverClass)
               )}
               title="Backward Left"
             >
@@ -457,8 +459,8 @@ export default function RoverController() {
               className={cn(
                 "absolute bottom-5 right-5 w-8 h-8 rounded border flex items-center justify-center transition-all cursor-pointer select-none touch-none z-10",
                 activeKeys.sr
-                  ? "bg-cyan-500 text-white border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.6)]"
-                  : "bg-slate-900/90 text-slate-400 border-slate-800 hover:text-cyan-400 hover:border-cyan-500/40"
+                  ? cn(accentBg, "text-slate-950 border-white", accentShadow)
+                  : cn("bg-slate-900/90 text-slate-400 border-slate-800", accentHoverClass)
               )}
               title="Backward Right"
             >
@@ -476,8 +478,8 @@ export default function RoverController() {
               className={cn(
                 "absolute bottom-1 w-9 h-9 rounded border flex items-center justify-center transition-all cursor-pointer select-none touch-none z-10",
                 activeKeys.s
-                  ? "bg-cyan-500 text-white border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.6)]"
-                  : "bg-slate-900/90 text-slate-400 border-slate-800 hover:text-cyan-400 hover:border-cyan-500/40"
+                  ? cn(accentBg, "text-slate-950 border-white", accentShadow)
+                  : cn("bg-slate-900/90 text-slate-400 border-slate-800", accentHoverClass)
               )}
               title="Move Backward (S / Down Arrow)"
             >
@@ -490,10 +492,10 @@ export default function RoverController() {
         <div className="space-y-1.5 pt-1">
           <div className="flex justify-between items-center text-[9px] text-slate-400">
             <span className="flex items-center gap-1 font-bold uppercase">
-              <Gauge className="h-3 w-3 text-cyan-400" />
+              <Gauge className={cn("h-3 w-3", accentText)} />
               VELOCITY SETTING (THROTTLE)
             </span>
-            <span className="font-extrabold text-cyan-400">{speed.toFixed(1)} m/s</span>
+            <span className={cn("font-extrabold", accentText)}>{speed.toFixed(1)} m/s</span>
           </div>
           <div className="flex items-center gap-3">
             <input
@@ -504,58 +506,109 @@ export default function RoverController() {
               value={speed}
               onChange={handleSpeedChange}
               disabled={controlMode === "auto"}
-              className="w-full h-1 bg-slate-950 rounded-lg appearance-none cursor-pointer accent-cyan-500 border border-slate-800/80 disabled:opacity-30 disabled:cursor-not-allowed"
+              className={cn(
+                "w-full h-1 bg-slate-950 rounded-lg appearance-none cursor-pointer accent-cyan-500 border border-slate-800/80 disabled:opacity-30 disabled:cursor-not-allowed",
+                isMother ? "accent-cyan-500" : "accent-amber-500"
+              )}
             />
           </div>
         </div>
 
         {/* IMU Orientation (MPU9250 Integration) */}
-        {motherRover && (
+        {activeTelemetryRover && (
           <div className="border-t border-slate-900 pt-3 mt-2 space-y-2 select-none">
             <span className="flex items-center gap-1.5 text-[9px] text-slate-450 font-bold uppercase tracking-widest">
-              <Compass className="h-3.5 w-3.5 text-cyan-400" />
+              <Compass className={cn("h-3.5 w-3.5", accentText)} />
               MPU9250 IMU TELEMETRY
             </span>
             <div className="grid grid-cols-3 gap-2 bg-slate-950/60 p-2 rounded border border-slate-900/80 text-[9px] font-mono">
               <div className="flex flex-col items-center justify-center border-r border-slate-900/80">
                 <span className="text-[7px] text-slate-500 font-bold uppercase">PITCH</span>
-                <span className="font-extrabold text-cyan-400 tracking-wide mt-0.5">
-                  {motherRover.pitch !== undefined ? `${Number(motherRover.pitch).toFixed(1)}°` : "0.0°"}
+                <span className={cn("font-extrabold tracking-wide mt-0.5", accentText)}>
+                  {activeTelemetryRover.pitch !== undefined ? `${Number(activeTelemetryRover.pitch).toFixed(1)}°` : "0.0°"}
                 </span>
               </div>
               <div className="flex flex-col items-center justify-center border-r border-slate-900/80">
                 <span className="text-[7px] text-slate-500 font-bold uppercase">ROLL</span>
-                <span className="font-extrabold text-cyan-400 tracking-wide mt-0.5">
-                  {motherRover.roll !== undefined ? `${Number(motherRover.roll).toFixed(1)}°` : "0.0°"}
+                <span className={cn("font-extrabold tracking-wide mt-0.5", accentText)}>
+                  {activeTelemetryRover.roll !== undefined ? `${Number(activeTelemetryRover.roll).toFixed(1)}°` : "0.0°"}
                 </span>
               </div>
               <div className="flex flex-col items-center justify-center">
                 <span className="text-[7px] text-slate-500 font-bold uppercase">YAW / HDG</span>
-                <span className="font-extrabold text-cyan-400 tracking-wide mt-0.5">
-                  {motherRover.heading !== undefined ? `${Number(motherRover.heading).toFixed(1)}°` : "0.0°"}
+                <span className={cn("font-extrabold tracking-wide mt-0.5", accentText)}>
+                  {activeTelemetryRover.heading !== undefined ? `${Number(activeTelemetryRover.heading).toFixed(1)}°` : "0.0°"}
                 </span>
               </div>
             </div>
             {/* Attitude horizon indicator */}
             <div className="h-10 bg-slate-950/90 rounded border border-slate-900/80 overflow-hidden relative flex items-center justify-center">
               <div 
-                className="absolute w-full h-[1.5px] bg-cyan-500/40 shadow-[0_0_8px_rgba(6,182,212,0.5)] transition-all duration-100 ease-out"
+                className={cn("absolute w-full h-[1.5px] transition-all duration-100 ease-out", accentBg, accentGlow)}
                 style={{
-                  transform: `rotate(${motherRover.roll || 0}deg) translateY(${(motherRover.pitch || 0) * 0.4}px)`
+                  transform: `rotate(${activeTelemetryRover.roll || 0}deg) translateY(${(activeTelemetryRover.pitch || 0) * 0.4}px)`
                 }}
               />
               <div className="absolute h-full w-[1.5px] bg-slate-800/40" />
-              <div className="absolute w-2.5 h-2.5 rounded-full border border-cyan-400/60 pointer-events-none flex items-center justify-center">
-                <div className="w-0.5 h-0.5 bg-cyan-400 rounded-full" />
+              <div className={cn("absolute w-2.5 h-2.5 rounded-full border pointer-events-none flex items-center justify-center", isMother ? "border-cyan-400/60" : "border-amber-400/60")}>
+                <div className={cn("w-0.5 h-0.5 rounded-full", isMother ? "bg-cyan-400" : "bg-amber-400")} />
               </div>
             </div>
           </div>
         )}
 
-        {/* Help tooltip */}
-        <div className="text-[7.5px] text-slate-500 leading-normal border-t border-slate-900 pt-2 flex items-center gap-1.5">
-          <Radio className="h-3 w-3 text-amber-500/80 shrink-0" />
-          <span>Hold WASD keys or click D-Pad buttons to move. Releasing stops the rover.</span>
+        {/* Global Controls & Mode options */}
+        <div className="border-t border-slate-900 pt-3 flex items-center justify-between gap-1.5">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setControlMode(controlMode === "manual" ? "auto" : "manual")}
+            className={cn(
+              "text-[8px] h-5 px-2 font-bold rounded border uppercase tracking-wider",
+              controlMode === "manual" 
+                ? "border-cyan-500/30 bg-cyan-950/20 text-cyan-400" 
+                : "border-emerald-500/30 bg-emerald-950/20 text-emerald-400"
+            )}
+          >
+            {controlMode.toUpperCase()} PILOT
+          </Button>
+          
+          <div className="flex gap-1">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setIsKeyboardActive(!isKeyboardActive)}
+              title="Toggle Keyboard Drive Controls"
+              className={cn(
+                "text-[8px] h-5 px-2 font-bold rounded border uppercase tracking-wider flex items-center gap-1",
+                isKeyboardActive 
+                  ? "border-amber-500/30 bg-amber-950/20 text-amber-400" 
+                  : "border-slate-800 bg-slate-950 text-slate-500"
+              )}
+            >
+              <Keyboard className="h-2.5 w-2.5" />
+              <span>{isKeyboardActive ? "KEY_ON" : "KEY_OFF"}</span>
+            </Button>
+
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setIsContinuous(!isContinuous);
+                handleStop();
+              }}
+              title="Toggle Continuous/Momentary Drive Mode"
+              className={cn(
+                "text-[8px] h-5 px-2 font-bold rounded border uppercase tracking-wider flex items-center gap-1",
+                isContinuous 
+                  ? "border-purple-500/30 bg-purple-950/20 text-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.4)]" 
+                  : "border-slate-800 bg-slate-950 text-slate-500"
+              )}
+            >
+              <Radio className="h-2.5 w-2.5" />
+              <span>{isContinuous ? "CONT" : "HOLD"}</span>
+            </Button>
+          </div>
         </div>
       </div>
     </div>
