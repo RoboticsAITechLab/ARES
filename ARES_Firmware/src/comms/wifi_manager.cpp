@@ -11,8 +11,8 @@ void WifiManager::begin(const char* stationSsid, const char* stationPassword) {
     WiFi.mode(WIFI_AP_STA);
     
     // Set custom AP IP subnet to avoid any conflict with router's DHCP range (e.g. 192.168.4.x)
-    IPAddress apIP(192, 168, 12, 1);
-    IPAddress gateway(192, 168, 12, 1);
+    IPAddress apIP(192, 168, 4, 1);
+    IPAddress gateway(192, 168, 4, 1);
     IPAddress subnet(255, 255, 255, 0);
     WiFi.softAPConfig(apIP, gateway, subnet);
     

@@ -47,14 +47,15 @@ void SafetyManager::update() {
         }
     }
 
-    // 4. Check Sensor Health Faults
+    // 4. Check Sensor Health Faults (Non-blocking Warning)
     if (!m_imu->isHealthy() || !m_sonar->isHealthy()) {
-        if (!m_sensorFault) {
-            Serial.printf("[Safety] SENSOR FAULT! IMU Healthy=%d, Sonar Healthy=%d\n", 
+        static bool warningLogged = false;
+        if (!warningLogged) {
+            Serial.printf("[Safety] WARNING: Sensor offline/faulty! IMU Healthy=%d, Sonar Healthy=%d\n", 
                 m_imu->isHealthy(), m_sonar->isHealthy());
-            m_sensorFault = true;
-            triggerEmergencyStop();
+            warningLogged = true;
         }
+        m_sensorFault = false;
     } else {
         m_sensorFault = false;
     }

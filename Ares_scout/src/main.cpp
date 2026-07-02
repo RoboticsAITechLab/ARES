@@ -8,6 +8,8 @@
 #include "telemetry.h"
 #include <esp_now.h>
 #include <WiFi.h>
+#include <WebSocketsClient.h>
+#include <ArduinoJson.h>
 
 struct __attribute__((packed)) ESPNowCommand {
     char command[16];
@@ -43,10 +45,125 @@ SafetyManager safetyManager(&motorController, &imuManager, &sonarSensor);
 Navigator navigator(&motorController, &imuManager, &sonarSensor);
 TelemetryManager telemetryManager(&imuManager, &sonarSensor, &motorController, &safetyManager);
 
+// WebSockets Client and Wi-Fi Config
+WebSocketsClient webSocket;
+bool wsConnected = false;
+const char *WIFI_SSID = "Airtel_RoboticsAiTechLab";
+const char *WIFI_PASSWORD = "RoboticsAiTechLabs";
+
 // Global State
 RoverState currentRoverState = RoverState::BOOT;
 unsigned long stateChangeTimerMs = 0;
 float currentThrottle = 0.5f;
+
+// Forward declaration of WebSocket command handler
+void handleWebSocketCommand(const char* payload, size_t length) {
+    JsonDocument doc;
+    DeserializationError error = deserializeJson(doc, payload, length);
+    if (error) {
+        return;
+    }
+
+    const char* type = doc["type"];
+    if (!type || strcmp(type, "rover_command") != 0) return;
+
+    const char* target = doc["target"];
+    if (target && strcmp(target, "ARES-SCOUT-01") != 0 && strcmp(target, "scout") != 0) {
+        return;
+    }
+
+    const char* cmd = doc["command"];
+    if (!cmd) return;
+
+    Serial.printf("[WS Command] Received: %s\n", cmd);
+
+    if (strcmp(cmd, "SET_STATE") == 0) {
+        const char* val = doc["value"];
+        if (val) {
+            String targetState = String(val);
+            if (targetState == "READY_FOR_DEPLOYMENT") {
+                currentRoverState = RoverState::READY_FOR_DEPLOYMENT;
+                stateChangeTimerMs = millis();
+            } else if (targetState == "ACTIVE") {
+                currentRoverState = RoverState::ACTIVE;
+                navigator.lockCurrentHeading();
+                stateChangeTimerMs = millis();
+            } else if (targetState == "DOCKED") {
+                currentRoverState = RoverState::DOCKED;
+                stateChangeTimerMs = millis();
+            }
+        }
+    } else if (strcmp(cmd, "estop") == 0) {
+        currentRoverState = RoverState::EMERGENCY_STOP;
+        motorController.emergencyStop();
+        stateChangeTimerMs = millis();
+    } else if (strcmp(cmd, "move") == 0) {
+        if (currentRoverState == RoverState::ACTIVE) {
+            motorController.setStandby(false);
+            const char* val = doc["value"];
+            if (val) {
+                String direction = String(val);
+                float leftSpd = 0.0f;
+                float rightSpd = 0.0f;
+                float baseSpd = currentThrottle;
+
+                if (direction == "forward") {
+                    leftSpd = baseSpd;
+                    rightSpd = baseSpd;
+                } else if (direction == "backward") {
+                    leftSpd = -baseSpd;
+                    rightSpd = -baseSpd;
+                } else if (direction == "left") {
+                    leftSpd = -baseSpd * 0.5f;
+                    rightSpd = baseSpd * 0.5f;
+                } else if (direction == "right") {
+                    leftSpd = baseSpd * 0.5f;
+                    rightSpd = -baseSpd * 0.5f;
+                } else if (direction == "forward-left") {
+                    leftSpd = baseSpd * 0.5f;
+                    rightSpd = baseSpd;
+                } else if (direction == "forward-right") {
+                    leftSpd = baseSpd;
+                    rightSpd = baseSpd * 0.5f;
+                } else if (direction == "backward-left") {
+                    leftSpd = -baseSpd * 0.5f;
+                    rightSpd = -baseSpd;
+                } else if (direction == "backward-right") {
+                    leftSpd = -baseSpd;
+                    rightSpd = -baseSpd * 0.5f;
+                }
+                motorController.setTargetSpeeds(leftSpd, rightSpd);
+            }
+        }
+    } else if (strcmp(cmd, "stop") == 0) {
+        if (currentRoverState == RoverState::ACTIVE) {
+            motorController.setTargetSpeeds(0.0f, 0.0f);
+        }
+    } else if (strcmp(cmd, "speed") == 0) {
+        float percentage = doc["value"] | 50.0f;
+        currentThrottle = constrain(percentage / 100.0f, 0.0f, 1.0f);
+    }
+}
+
+void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
+    switch(type) {
+        case WStype_DISCONNECTED:
+            Serial.println("[WS] Disconnected from Cloud Server!");
+            wsConnected = false;
+            break;
+        case WStype_CONNECTED:
+            Serial.println("[WS] Connected to Cloud Server successfully.");
+            wsConnected = true;
+            break;
+        case WStype_TEXT:
+            handleWebSocketCommand((const char*)payload, length);
+            break;
+        default:
+            break;
+    }
+}
+
+// Global State (moved to top)
 
 void setup() {
     Serial.begin(115200);
@@ -71,12 +188,24 @@ void setup() {
         currentRoverState = RoverState::CALIBRATION;
         stateChangeTimerMs = millis();
     } else {
-        Serial.println("[Boot] CRITICAL ERROR: IMU initialization failed!");
-        currentRoverState = RoverState::SENSOR_FAILURE;
+        Serial.println("[Boot] WARNING: IMU initialization failed! Booting into DOCKED state without IMU.");
+        currentRoverState = RoverState::DOCKED;
+        stateChangeTimerMs = millis();
     }
+
+    // Connect to router Wi-Fi station
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    Serial.printf("[WiFi] Attempting connection to station SSID: %s\n", WIFI_SSID);
+
+    // Initialize WebSockets client to connect directly to the cloud Render URL
+    webSocket.beginSSL("ares-mk3j.onrender.com", 443, "/ws?token=ares_auth_secret&role=rover&roverId=ARES-SCOUT-01");
+    webSocket.onEvent(webSocketEvent);
+    webSocket.setReconnectInterval(5000);
 }
 
 void loop() {
+    webSocket.loop();
+
     // Process incoming ESP-NOW commands from Mother Rover
     if (g_commandPending) {
         g_commandPending = false;

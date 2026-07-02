@@ -10,7 +10,7 @@ export class WebSocketServerManager {
   private telemetryHandler: ((data: any) => void) | null = null;
 
   private controllers: Set<WebSocket> = new Set();
-  private roverSocket: WebSocket | null = null;
+  private rovers: Map<string, WebSocket> = new Map();
 
   public onCommand(handler: (command: string, value: any, target?: string) => void): void {
     this.commandHandler = handler;
@@ -81,7 +81,7 @@ export class WebSocketServerManager {
           }
 
           console.log(`[ARES WebSocket] Rover ${roverId} authenticated and connected.`);
-          this.roverSocket = ws;
+          this.rovers.set(roverId, ws);
 
           await prisma.roverEvent.create({
             data: {
@@ -121,9 +121,9 @@ export class WebSocketServerManager {
         });
 
         ws.on("close", () => {
-          console.log("[ARES WebSocket] Physical Rover disconnected.");
-          if (this.roverSocket === ws) {
-            this.roverSocket = null;
+          console.log(`[ARES WebSocket] Physical Rover ${roverId} disconnected.`);
+          if (this.rovers.get(roverId) === ws) {
+            this.rovers.delete(roverId);
           }
         });
 
@@ -187,14 +187,16 @@ export class WebSocketServerManager {
         type: "heartbeat",
         timestamp: Date.now(),
       });
-      // Also ping the rover if connected to keep connection alive
-      if (this.roverSocket && this.roverSocket.readyState === WebSocket.OPEN) {
-        try {
-          this.roverSocket.send(JSON.stringify({ type: "ping" }));
-        } catch (err) {
-          console.error("[ARES WebSocket] Error sending ping to rover:", err);
+      // Also ping all connected rovers to keep connection alive
+      this.rovers.forEach((socket, rId) => {
+        if (socket.readyState === WebSocket.OPEN) {
+          try {
+            socket.send(JSON.stringify({ type: "ping" }));
+          } catch (err) {
+            console.error(`[ARES WebSocket] Error sending ping to rover ${rId}:`, err);
+          }
         }
-      }
+      });
     }, 5000); // 5 seconds interval
   }
 
@@ -212,27 +214,43 @@ export class WebSocketServerManager {
     });
   }
 
-  public isRoverConnected(): boolean {
-    return this.roverSocket !== null && this.roverSocket.readyState === WebSocket.OPEN;
+  public isRoverConnected(roverId?: string): boolean {
+    if (roverId) {
+      const socket = this.rovers.get(roverId);
+      return socket !== undefined && socket.readyState === WebSocket.OPEN;
+    }
+    let anyConnected = false;
+    this.rovers.forEach((socket) => {
+      if (socket.readyState === WebSocket.OPEN) anyConnected = true;
+    });
+    return anyConnected;
   }
 
   public sendCommandToRover(command: string, value: any, target?: string): void {
-    if (this.roverSocket && this.roverSocket.readyState === WebSocket.OPEN) {
+    let targetId = target || "ARES-MOTHER-01";
+    if (targetId === "mother-rover" || targetId === "mother") {
+      targetId = "ARES-MOTHER-01";
+    } else if (targetId === "scout") {
+      targetId = "ARES-SCOUT-01";
+    }
+
+    const socket = this.rovers.get(targetId);
+    if (socket && socket.readyState === WebSocket.OPEN) {
       try {
         const payload = JSON.stringify({
           type: "rover_command",
-          target: target || "ARES-MOTHER-01",
+          target: targetId,
           command,
           value,
           token: "ares_auth_secret",
           timestamp: Date.now()
         });
-        this.roverSocket.send(payload);
+        socket.send(payload);
       } catch (err) {
-        console.error("[ARES WebSocket] Failed to send command to rover socket:", err);
+        console.error(`[ARES WebSocket] Failed to send command to rover socket ${targetId}:`, err);
       }
     } else {
-      console.warn("[ARES WebSocket] Cannot send command: Rover socket is not connected.");
+      console.warn(`[ARES WebSocket] Cannot send command: Rover socket for ${targetId} is not connected.`);
     }
   }
 
@@ -249,10 +267,10 @@ export class WebSocketServerManager {
       });
       this.controllers.clear();
 
-      if (this.roverSocket) {
-        this.roverSocket.terminate();
-        this.roverSocket = null;
-      }
+      this.rovers.forEach((socket) => {
+        socket.terminate();
+      });
+      this.rovers.clear();
 
       this.wss.close(() => {
         console.log("[ARES WebSocket] Server shut down completed.");

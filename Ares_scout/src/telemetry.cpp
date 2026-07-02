@@ -1,6 +1,7 @@
 #include "telemetry.h"
 #include <esp_now.h>
 #include <WiFi.h>
+#include <WebSocketsClient.h>
 
 struct __attribute__((packed)) ESPNowTelemetry {
     float battery;
@@ -106,6 +107,19 @@ void TelemetryManager::update(RoverState currentState) {
     // Output JSON to Serial
     serializeJson(doc, Serial);
     Serial.println();
+
+    // Direct WebSockets Telemetry Relay to Cloud Server
+    extern WebSocketsClient webSocket;
+    extern bool wsConnected;
+    if (wsConnected) {
+        // Embed identification fields so backend gateway registers it properly
+        doc["type"] = "rover_telemetry";
+        doc["roverId"] = "ARES-SCOUT-01";
+        
+        String payload;
+        serializeJson(doc, payload);
+        webSocket.sendTXT(payload);
+    }
 }
 
 String TelemetryManager::getTerrainString(float variance) {

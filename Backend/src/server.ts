@@ -54,7 +54,7 @@ const handleTelemetryUpdate = async (packet: FleetPacket) => {
         create: {
           id: m.id,
           name: m.id === "mother-rover" ? "Mother Rover" : m.id,
-          type: "mother",
+          type: m.id.toLowerCase().includes("scout") ? "scout" : "mother",
           status: "READY",
           battery: m.battery,
           signal: m.signal,
@@ -135,8 +135,8 @@ if (isPhysical) {
 }
 
 wsManager.onCommand((command, value, target) => {
-  // If a physical rover is connected, always prioritize sending commands to it
-  if (wsManager.isRoverConnected()) {
+  // If the target physical rover is connected, prioritize sending commands to it
+  if (wsManager.isRoverConnected(target)) {
     wsManager.sendCommandToRover(command, value, target);
   } else if (isPhysical) {
     wsManager.sendCommandToRover(command, value, target);

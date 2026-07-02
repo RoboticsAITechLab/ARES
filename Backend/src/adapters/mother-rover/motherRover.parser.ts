@@ -14,9 +14,25 @@ export class MotherRoverParser {
       const rssi = data.wifiRssi ?? data.signalRssi ?? -50;
       let signal = Math.max(0, Math.min(100, 2 * (rssi + 100)));
 
+      const id = data.roverId || "mother-rover";
+      const isScout = id.toLowerCase().includes("scout") || id === "ARES-SCOUT-01";
+
+      const parsedScout = isScout ? {
+        id,
+        battery: data.batteryPercent ?? data.battery ?? 100,
+        signal,
+        temperature: data.cpuTemp ?? data.temperature ?? 24,
+        speed: data.speed ?? 0.0,
+        heading: data.yaw ?? 0,
+        x: data.x ?? 40,
+        y: data.y ?? 30,
+        status: data.status || "ACTIVE",
+        timestamp: Date.now()
+      } : null;
+
       return {
-        mother: {
-          id: data.roverId || "mother-rover",
+        mother: isScout ? null : {
+          id,
           battery: data.batteryPercent ?? data.battery ?? 100,
           signal,
           temperature: data.cpuTemp ?? data.temperature ?? 24,
@@ -42,7 +58,7 @@ export class MotherRoverParser {
           heapFree: data.heapFree || 0,
           uptime: data.uptime || 0
         } as any,
-        scouts: Array.isArray(data.scouts) ? data.scouts.map((s: any) => ({
+        scouts: isScout ? [parsedScout] as any[] : (Array.isArray(data.scouts) ? data.scouts.map((s: any) => ({
           id: s.id || "scout-rover",
           battery: s.battery ?? 100,
           signal: s.signal ?? 100,
@@ -53,7 +69,7 @@ export class MotherRoverParser {
           y: s.y ?? 35,
           status: s.status || "ACTIVE",
           timestamp: Date.now()
-        })) : []
+        })) : [])
       };
     } catch (err) {
       console.error("[Parser] Failed to parse telemetry JSON packet:", err);
