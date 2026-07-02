@@ -9,6 +9,7 @@ export class AresWebSocketClient {
   private reconnectTimeout: NodeJS.Timeout | null = null;
   private reconnectInterval = 3000; // Attempt reconnect every 3 seconds
   private shouldReconnect = true;
+  private hasConnectedOnce = false;
 
   private constructor(url: string) {
     this.url = url;
@@ -48,7 +49,7 @@ export class AresWebSocketClient {
       this.setupEventHandlers();
     } catch (err) {
       console.error("[ARES WS Client] Failed to instantiate WebSocket:", err);
-      this.handleDisconnect();
+      this.handleFallback();
     }
   }
 
@@ -57,6 +58,7 @@ export class AresWebSocketClient {
 
     this.ws.onopen = () => {
       console.log("[ARES WS Client] WebSocket connection opened successfully.");
+      this.hasConnectedOnce = true;
       const store = useConnectionStore.getState();
       store.setConnectionStatus("connected");
       
@@ -77,12 +79,20 @@ export class AresWebSocketClient {
 
     this.ws.onclose = (event) => {
       console.log(`[ARES WS Client] WebSocket connection closed. Code: ${event.code}, Reason: ${event.reason}`);
-      this.handleDisconnect();
+      this.handleFallback();
     };
 
     this.ws.onerror = (err) => {
       console.error("[ARES WS Client] WebSocket connection error:", err);
     };
+  }
+
+  private handleFallback(): void {
+    if (!this.hasConnectedOnce && (this.url.includes("127.0.0.1") || this.url.includes("localhost"))) {
+      console.log("[ARES WS Client] Local connection failed. Falling back to Cloud Server (Render)...");
+      this.url = "wss://ares-mk3j.onrender.com/ws?token=ares_auth_secret&role=controller";
+    }
+    this.handleDisconnect();
   }
 
   private handleMessage(message: WebSocketMessage): void {
