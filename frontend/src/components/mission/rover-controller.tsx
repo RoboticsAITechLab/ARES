@@ -57,7 +57,7 @@ export default function RoverController() {
   const scoutRover = rovers.find(r => r.id === "ARES-SCOUT-01" || r.type === "scout") || fleet?.scouts?.[0];
 
   // Pick the telemetry from active rover
-  const activeTelemetryRover = targetRoverId === "ARES-MOTHER-01" ? motherRover : scoutRover;
+  const activeTelemetryRover = (targetRoverId === "ARES-MOTHER-01" ? motherRover : scoutRover) as any;
 
   // Accent styling based on selection
   const isMother = targetRoverId === "ARES-MOTHER-01";
