@@ -104,13 +104,15 @@ void TelemetryManager::update(RoverState currentState) {
     if (m_safety->isWatchdogTriggered()) errors.add("WATCHDOG_TIMEOUT");
     if (m_safety->isEmergencyActive()) errors.add("EMERGENCY_STOP");
 
-    // Output JSON to Serial
-    serializeJson(doc, Serial);
-    Serial.println();
-
     // Direct WebSockets Telemetry Relay to Cloud Server
     extern WebSocketsClient webSocket;
     extern bool wsConnected;
+
+    // Output JSON to Serial
+    Serial.printf("[Debug] WiFi Status: %d (3=Connected), WS Connected: %d\n", WiFi.status(), wsConnected);
+    serializeJson(doc, Serial);
+    Serial.println();
+
     if (wsConnected) {
         // Embed identification fields so backend gateway registers it properly
         doc["type"] = "rover_telemetry";
